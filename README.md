@@ -1,31 +1,36 @@
-This is a Kotlin Multiplatform project targeting Android, iOS.
+# PharmaMobil - Aplicación Kotlin Multiplatform (KMP)
 
-* [/iosApp](./iosApp/iosApp) contains an iOS application. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+Proyecto desarrollado para la asignatura **Desarrollo de Aplicaciones Móviles** (Sesión 09 - Unidad 2).
 
-* [/shared](./shared/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./shared/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./shared/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./shared/src/jvmMain/kotlin)
-    folder is the appropriate location.
+## 🚀 Código específico de plataforma (Capacidades Nativas)
 
-### Running the apps
+En la Sesión 09 se implementaron las siguientes capacidades nativas utilizando el mecanismo `expect`/`actual` e inyección de dependencias con Koin:
 
-Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:
-
-- Android app: `./gradlew :androidApp:assembleDebug`
-- iOS app: open the [/iosApp](./iosApp) directory in Xcode and run it from there.
-
-### Running tests
-
-Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
-
-- Android tests: `./gradlew :shared:testAndroidHostTest`
-- iOS tests: `./gradlew :shared:iosSimulatorArm64Test`
+| Capacidad | Firma `expect` / Interface | API usada en Android (`androidMain`) | API usada en iOS (`iosMain`) | Ubicación |
+| :--- | :--- | :--- | :--- | :--- |
+| **Formato de moneda** | `expect fun formatearSoles(valor: Double): String` | `NumberFormat` con `Locale("es", "PE")` | `NSNumberFormatter` con `NSLocale("es_PE")` | `platform/Formato.kt` |
+| **Compartir producto** | `interface Compartidor` | `Intent.ACTION_SEND` (`FLAG_ACTIVITY_NEW_TASK`) | `UIActivityViewController` | `domain/platform/Compartidor.kt` |
+| **Información del dispositivo** | `expect class InfoDispositivo()` | `Build.VERSION.RELEASE`, `Build.MODEL` | `UIDevice.currentDevice.systemName/Version/model` | `platform/InfoDispositivo.kt` |
+| **Módulo de inyección Koin** | `expect val platformModule: Module` | `module { single<Compartidor> { CompartidorAndroid(androidContext()) } }` | `module { single<Compartidor> { CompartidorIos() } }` | `di/PlatformModule.kt` |
 
 ---
 
+## 🛠️ Estructura del Proyecto
+
+* **`/androidApp`**: Aplicación Android nativa con Compose.
+* **`/iosApp`**: Aplicación iOS nativa (SwiftUI) para la integración KMP.
+* **`/shared`**: Módulo compartido Compose Multiplatform.
+  * **`commonMain`**: Código común (Lógica de dominio, Casos de uso, ViewModels, UI Compose común).
+  * **`androidMain`**: Implementaciones `actual` específicas de Android.
+  * **`iosMain`**: Implementaciones `actual` específicas de iOS.
+
+---
+
+## 🏃 Ejecución del Proyecto
+
+* **App Android:** `./gradlew :androidApp:assembleDebug`
+* **Pruebas unitarias:** `./gradlew test`
+* **App iOS:** Abrir la carpeta `/iosApp` en Xcode y ejecutar.
+
+---
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…

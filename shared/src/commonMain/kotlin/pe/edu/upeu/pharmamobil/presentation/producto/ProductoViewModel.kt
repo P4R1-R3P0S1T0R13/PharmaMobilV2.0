@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import pe.edu.upeu.pharmamobil.domain.platform.Compartidor
 import pe.edu.upeu.pharmamobil.domain.usecase.ListarProductosUseCase
 import pe.edu.upeu.pharmamobil.domain.usecase.ProductoInvalidoException
 import pe.edu.upeu.pharmamobil.domain.usecase.RegistrarProductoUseCase
@@ -14,7 +15,8 @@ import pe.edu.upeu.pharmamobil.domain.usecase.RegistrarProductoUseCase
 
 class ProductoViewModel(
     private val registrarProducto: RegistrarProductoUseCase,
-    private val listarProductos: ListarProductosUseCase
+    private val listarProductos: ListarProductosUseCase,
+    private val compartidor: Compartidor
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProductoUiState())
@@ -51,6 +53,11 @@ class ProductoViewModel(
                 it.copy(fase = fase)
             }
         }
+    }
+
+    fun compartirProducto(producto: ProductoUi) {
+        val texto = "${producto.nombre} — ${producto.precio} · Stock: ${producto.stock}"
+        compartidor.compartir(texto)
     }
 
     fun onNombreChange(nombre: String) {

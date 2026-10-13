@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalPharmacy
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.Person
@@ -22,10 +23,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import pe.edu.upeu.pharmamobil.platform.InfoDispositivo
 
 @Composable
 fun InicioScreen() {
@@ -62,6 +65,8 @@ fun InicioScreen() {
             titulo = "Revisar pedidos",
             descripcion = "Disponible en una próxima sesión del curso."
         )
+
+        InfoDispositivoCard()
     }
 }
 
@@ -97,6 +102,43 @@ private fun Portada() {
                 text = "Sistema de gestión farmacéutica para tu cadena de boticas.",
                 style = MaterialTheme.typography.bodyMedium
             )
+        }
+    }
+}
+
+
+@Composable
+private fun InfoDispositivoCard() {
+    val info = remember { InfoDispositivo() }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+
+            Column {
+                Text(
+                    text = "Dispositivo actual",
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = "SO: ${info.sistema} ${info.version} · Modelo: ${info.modelo}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     }
 }

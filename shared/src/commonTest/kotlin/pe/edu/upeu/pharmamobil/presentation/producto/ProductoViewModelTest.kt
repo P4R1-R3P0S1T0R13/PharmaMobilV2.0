@@ -6,6 +6,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import pe.edu.upeu.pharmamobil.data.repository.FakeCompartidor
 import pe.edu.upeu.pharmamobil.data.repository.FakeProductoRepository
 import pe.edu.upeu.pharmamobil.domain.model.Producto
 import pe.edu.upeu.pharmamobil.domain.usecase.ListarProductosUseCase
@@ -18,10 +19,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * viewModelScope corre sobre Dispatchers.Main, que en una prueba no existe:
- * setMain lo sustituye por un dispatcher de prueba antes de cada caso.
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProductoViewModelTest {
 
@@ -36,10 +33,12 @@ class ProductoViewModelTest {
     }
 
     private fun nuevoViewModel(
-        repositorio: FakeProductoRepository = FakeProductoRepository()
+        repositorio: FakeProductoRepository = FakeProductoRepository(),
+        compartidor: FakeCompartidor = FakeCompartidor()
     ) = ProductoViewModel(
         registrarProducto = RegistrarProductoUseCase(repositorio),
-        listarProductos = ListarProductosUseCase(repositorio)
+        listarProductos = ListarProductosUseCase(repositorio),
+        compartidor = compartidor
     )
 
     @Test
@@ -66,6 +65,24 @@ class ProductoViewModelTest {
         assertEquals("S/ 12.50", fase.productos.first().precio)
         assertEquals("5 u.", fase.productos.first().stock)
         assertTrue(fase.productos.first().requiereReposicion)
+    }
+
+    @Test
+    fun compartirProductoEnviaTextoACompartidor() = runTest {
+        val compartidor = FakeCompartidor()
+        val viewModel = nuevoViewModel(compartidor = compartidor)
+
+        val productoUi = ProductoUi(
+            id = 1L,
+            nombre = "Amoxicilina",
+            precio = "S/ 15.00",
+            stock = "10 u.",
+            requiereReposicion = false
+        )
+
+        viewModel.compartirProducto(productoUi)
+
+        assertEquals("Amoxicilina — S/ 15.00 · Stock: 10 u.", compartidor.ultimoTextoCompartido)
     }
 
     @Test

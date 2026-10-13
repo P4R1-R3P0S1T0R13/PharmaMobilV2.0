@@ -15,11 +15,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Medication
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -104,7 +106,10 @@ fun ProductoScreen(
                             items = fase.productos,
                             key = { it.id }
                         ) { producto ->
-                            ProductoItem(producto)
+                            ProductoItem(
+                                producto = producto,
+                                onCompartir = viewModel::compartirProducto
+                            )
                         }
                     }
 
@@ -230,7 +235,8 @@ private fun EncabezadoInventario(
 
 @Composable
 private fun ProductoItem(
-    producto: ProductoUi
+    producto: ProductoUi,
+    onCompartir: (ProductoUi) -> Unit
 ) {
 
     Card(
@@ -271,6 +277,13 @@ private fun ProductoItem(
                     text = "${producto.precio}  ·  ${producto.stock}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            IconButton(onClick = { onCompartir(producto) }) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Compartir producto"
                 )
             }
 
