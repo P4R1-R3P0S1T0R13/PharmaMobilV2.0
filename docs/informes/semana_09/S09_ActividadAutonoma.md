@@ -53,6 +53,8 @@ Al provocar deliberadamente la omisión de una declaración `actual` (por ejempl
 Line 7: Error: No actual for expect declaration in module(s): androidMain, iosArm64Main, iosSimulatorArm64Main for the text `expect` on the line `expect fun formatearSoles(valor: Double): String`
 ```
 
+![Captura del Error del Compilador](evidencias/evidencia_04_error_compilador_android_studio.png)
+
 Este comportamiento garantiza que no existan errores silenciosos ni excepciones inesperadas en tiempo de ejecución (`UnsatisfiedLinkError` o `ClassNotFoundException`), obligando al desarrollador a cumplir los contratos de plataforma antes de permitir la generación de los artefactos.
 
 ### 5. ¿Qué capacidad del proyecto NO debería bajar al código específico de plataforma y por qué?
@@ -165,6 +167,11 @@ Captura de pantalla del selector nativo del sistema operativo desplegado al pres
 Captura de pantalla de la pantalla de Inicio (`InicioScreen.kt`), mostrando la tarjeta informativa con los datos reales del dispositivo Android (`SO: Android 17 · Modelo: Google sdk_gphone16k_x86_64`):
 
 ![Info Dispositivo Android](evidencias/evidencia_02_inicio_dispositivo_android.png)
+
+### 4. Captura del Mensaje de Error del Compilador (`expect`/`actual`)
+Captura de la ventana de salida de compilación (*Build Output*) en Android Studio / Gradle al omitir deliberadamente la declaración `actual`:
+
+![Error Compilador expect/actual](evidencias/evidencia_04_error_compilador_android_studio.png)
 
 ---
 
