@@ -1,5 +1,6 @@
 package pe.edu.upeu.pharmamobil
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,11 +10,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +31,7 @@ import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.PermanentDrawerSheet
 import androidx.compose.material3.PermanentNavigationDrawer
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -37,19 +43,25 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import org.koin.compose.KoinContext
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
-import androidx.compose.material.icons.filled.Share
+import pe.edu.upeu.pharmamobil.domain.model.EstadoSesion
+import pe.edu.upeu.pharmamobil.domain.model.Permisos
+import pe.edu.upeu.pharmamobil.domain.model.Sesion
 import pe.edu.upeu.pharmamobil.domain.model.textoParaCompartir
+import pe.edu.upeu.pharmamobil.domain.repository.AuthRepository
 import pe.edu.upeu.pharmamobil.navigation.Screen
 import pe.edu.upeu.pharmamobil.platform.Compartidor
 import pe.edu.upeu.pharmamobil.platform.formatearSoles
 import pe.edu.upeu.pharmamobil.presentation.cliente.ClienteScreen
 import pe.edu.upeu.pharmamobil.presentation.inicio.InicioScreen
+import pe.edu.upeu.pharmamobil.presentation.login.LoginScreen
 import pe.edu.upeu.pharmamobil.presentation.pedido.PedidoScreen
 import pe.edu.upeu.pharmamobil.presentation.producto.ProductoScreen
 import pe.edu.upeu.pharmamobil.theme.PharmaMobilTheme
@@ -60,125 +72,160 @@ private val ScreenSaver = Saver<Screen, Int>(
     restore = { Screen.todos[it] }
 )
 
+/** Acciones comunes de la estructura principal. */
+private class Navegacion(
+    val actual: Screen,
+    val darkTheme: Boolean,
+    val sesion: Sesion,
+    val navegar: (Screen) -> Unit,
+    val cambiarTema: () -> Unit,
+    val cerrarSesion: () -> Unit
+)
+
 @Composable
 fun App() = KoinContext {
-    var pantallaActual by rememberSaveable(stateSaver = ScreenSaver) { mutableStateOf<Screen>(Screen.Inicio) }
     var darkTheme by rememberSaveable { mutableStateOf(false) }
+    val auth = koinInject<AuthRepository>()
+    val estadoSesion by auth.estado.collectAsStateWithLifecycle()
 
     PharmaMobilTheme(darkTheme = darkTheme) {
-        // Navegacion adaptativa segun el ancho disponible.
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val navegar: (Screen) -> Unit = { pantallaActual = it }
-            val cambiarTema = { darkTheme = !darkTheme }
-            when {
-                maxWidth < 600.dp -> NavegacionTelefono(pantallaActual, darkTheme, navegar, cambiarTema)
-                maxWidth < 840.dp -> NavegacionTablet(pantallaActual, darkTheme, navegar, cambiarTema)
-                else -> NavegacionEscritorio(pantallaActual, darkTheme, navegar, cambiarTema)
+        Surface(modifier = Modifier.fillMaxSize()) {
+            when (val estado = estadoSesion) {
+                EstadoSesion.Verificando -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+
+                is EstadoSesion.Inactiva -> LoginScreen(viewModel = koinViewModel(), motivo = estado.motivo)
+
+                is EstadoSesion.Activa -> Principal(
+                    sesion = estado.sesion,
+                    darkTheme = darkTheme,
+                    cambiarTema = { darkTheme = !darkTheme },
+                    cerrarSesion = auth::cerrarSesion
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun Principal(sesion: Sesion, darkTheme: Boolean, cambiarTema: () -> Unit, cerrarSesion: () -> Unit) {
+    var pantallaActual by rememberSaveable(stateSaver = ScreenSaver) { mutableStateOf<Screen>(Screen.Inicio) }
+    val nav = Navegacion(pantallaActual, darkTheme, sesion, { pantallaActual = it }, cambiarTema, cerrarSesion)
+
+    // Navegacion adaptativa segun el ancho disponible.
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        when {
+            maxWidth < 600.dp -> NavegacionTelefono(nav)
+            maxWidth < 840.dp -> NavegacionTablet(nav)
+            else -> NavegacionEscritorio(nav)
         }
     }
 }
 
 /** Telefono: drawer modal que se abre desde el icono de menu. */
 @Composable
-private fun NavegacionTelefono(
-    actual: Screen, darkTheme: Boolean, navegar: (Screen) -> Unit, cambiarTema: () -> Unit
-) {
+private fun NavegacionTelefono(nav: Navegacion) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                ContenidoDrawer(actual) {
-                    navegar(it)
+                ContenidoDrawer(nav) {
+                    nav.navegar(it)
                     scope.launch { drawerState.close() }
                 }
             }
         }
     ) {
-        Estructura(actual, darkTheme, cambiarTema, onMenu = { scope.launch { drawerState.open() } })
+        Estructura(nav, onMenu = { scope.launch { drawerState.open() } })
     }
 }
 
 /** Tablet: NavigationRail fijo a la izquierda. */
 @Composable
-private fun NavegacionTablet(
-    actual: Screen, darkTheme: Boolean, navegar: (Screen) -> Unit, cambiarTema: () -> Unit
-) {
+private fun NavegacionTablet(nav: Navegacion) {
     Row(modifier = Modifier.fillMaxSize()) {
         NavigationRail {
             Spacer(Modifier.height(12.dp))
             Screen.todos.forEach { destino ->
                 NavigationRailItem(
-                    selected = actual == destino,
-                    onClick = { navegar(destino) },
+                    selected = nav.actual == destino,
+                    onClick = { nav.navegar(destino) },
                     icon = { Icon(destino.icono, contentDescription = null) },
                     label = { Text(destino.titulo) }
                 )
             }
         }
-        Estructura(actual, darkTheme, cambiarTema, onMenu = null)
+        Estructura(nav, onMenu = null)
     }
 }
 
 /** Escritorio o plegable abierto: drawer permanente. */
 @Composable
-private fun NavegacionEscritorio(
-    actual: Screen, darkTheme: Boolean, navegar: (Screen) -> Unit, cambiarTema: () -> Unit
-) {
+private fun NavegacionEscritorio(nav: Navegacion) {
     PermanentNavigationDrawer(
         drawerContent = {
-            PermanentDrawerSheet(modifier = Modifier.width(260.dp)) { ContenidoDrawer(actual, navegar) }
+            PermanentDrawerSheet(modifier = Modifier.width(280.dp)) { ContenidoDrawer(nav, nav.navegar) }
         }
     ) {
-        Estructura(actual, darkTheme, cambiarTema, onMenu = null)
+        Estructura(nav, onMenu = null)
     }
 }
 
 @Composable
-private fun ContenidoDrawer(actual: Screen, onSeleccion: (Screen) -> Unit) {
+private fun ContenidoDrawer(nav: Navegacion, onSeleccion: (Screen) -> Unit) {
     Column {
-        Text(
-            "PharmaMobil",
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(24.dp)
-        )
+        Column(modifier = Modifier.padding(24.dp)) {
+            Text("PharmaMobil", style = MaterialTheme.typography.titleLarge)
+            Text(
+                "${nav.sesion.nombreCompleto.ifBlank { nav.sesion.username }} · ${nav.sesion.roles.joinToString()}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Screen.todos.forEach { destino ->
             NavigationDrawerItem(
                 label = { Text(destino.titulo) },
-                selected = actual == destino,
+                selected = nav.actual == destino,
                 onClick = { onSeleccion(destino) },
                 icon = { Icon(destino.icono, contentDescription = null) },
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
             )
         }
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        NavigationDrawerItem(
+            label = { Text("Cerrar sesion") },
+            selected = false,
+            onClick = nav.cerrarSesion,
+            icon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null) },
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun Estructura(
-    actual: Screen,
-    darkTheme: Boolean,
-    cambiarTema: () -> Unit,
-    onMenu: (() -> Unit)?
-) {
+private fun Estructura(nav: Navegacion, onMenu: (() -> Unit)?) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(actual.titulo) },
+                title = { Text(nav.actual.titulo) },
                 navigationIcon = {
                     if (onMenu != null) {
                         IconButton(onClick = onMenu) { Icon(Icons.Default.Menu, contentDescription = "Abrir menu") }
                     }
                 },
                 actions = {
-                    IconButton(onClick = cambiarTema) {
+                    IconButton(onClick = nav.cambiarTema) {
                         Icon(
-                            if (darkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            if (nav.darkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
                             contentDescription = "Cambiar tema"
                         )
+                    }
+                    IconButton(onClick = nav.cerrarSesion) {
+                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Cerrar sesion")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -191,23 +238,26 @@ private fun Estructura(
         }
     ) { padding ->
         val contenido = Modifier.padding(padding)
-        when (actual) {
-            Screen.Inicio -> InicioScreen(contenido)
-            Screen.Productos -> ProductosConCapacidadesNativas(contenido)
+        // key = usuario: al cambiar de usuario se crea un ViewModel nuevo, sin datos del anterior.
+        val clave = nav.sesion.username
+        when (nav.actual) {
+            Screen.Inicio -> InicioScreen(nav.sesion, koinViewModel(key = "inicio-$clave"), contenido)
+            Screen.Productos -> ProductosConCapacidadesNativas(nav.sesion, contenido)
             Screen.Clientes -> ClienteScreen(contenido)
             Screen.Pedidos -> PedidoScreen(contenido)
         }
     }
 }
 
-/** Productos con precio en soles (expect/actual) y boton de compartir nativo. */
+/** Productos con precio en soles (expect/actual), compartir nativo y permisos por rol. */
 @Composable
-private fun ProductosConCapacidadesNativas(modifier: Modifier) {
+private fun ProductosConCapacidadesNativas(sesion: Sesion, modifier: Modifier) {
     val compartidor = koinInject<Compartidor>()
     ProductoScreen(
-        viewModel = koinViewModel(),
+        viewModel = koinViewModel(key = "productos-${sesion.username}"),
         modifier = modifier,
         formatearPrecio = ::formatearSoles,
+        puedeEscribir = sesion.puede(Permisos.CATALOGO_ESCRIBIR),
         accionesExtra = { producto ->
             IconButton(onClick = { compartidor.compartir(producto.textoParaCompartir(::formatearSoles)) }) {
                 Icon(Icons.Default.Share, contentDescription = "Compartir")
