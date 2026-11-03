@@ -14,7 +14,13 @@ data class ProductoUiState(
     val pestana: Int = 0,
     val operacion: Operacion = Operacion.Ninguna,
     val productoAEliminar: Producto? = null,
-    val mensaje: String? = null
+    val mensaje: String? = null,
+    /** Sesion 11: sincronizacion en segundo plano con PharmaSoft. */
+    val sincronizando: Boolean = false,
+    /** Aviso persistente cuando se muestran datos locales sin conexion. */
+    val avisoRed: String? = null,
+    /** Instante de la ultima sincronizacion correcta; null si nunca se sincronizo. */
+    val ultimaSincronizacion: Long? = null
 ) {
     sealed interface Fase {
         data object Cargando : Fase
@@ -58,3 +64,17 @@ fun filtrarPorPestana(productos: List<Producto>, pestana: Int): List<Producto> =
         1 -> productos.filter { !it.activo }
         else -> productos.filter { it.requiereReposicion }
     }
+
+/** Antiguedad de los datos en lenguaje natural: "Actualizado hace 2 horas". */
+fun textoAntiguedad(ultimaMs: Long?, ahoraMs: Long): String {
+    if (ultimaMs == null) return "Aun no se sincronizo con el servidor"
+    val minutos = ((ahoraMs - ultimaMs).coerceAtLeast(0)) / 60_000
+    val horas = minutos / 60
+    val dias = horas / 24
+    return when {
+        minutos < 1 -> "Actualizado hace un momento"
+        minutos < 60 -> "Actualizado hace $minutos ${if (minutos == 1L) "minuto" else "minutos"}"
+        horas < 24 -> "Actualizado hace $horas ${if (horas == 1L) "hora" else "horas"}"
+        else -> "Actualizado hace $dias ${if (dias == 1L) "dia" else "dias"}"
+    }
+}

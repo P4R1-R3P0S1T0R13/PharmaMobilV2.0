@@ -23,30 +23,56 @@ class ProductoViewModel(
     private val _uiState = MutableStateFlow(ProductoUiState())
     val uiState: StateFlow<ProductoUiState> = _uiState.asStateFlow()
 
+    /** Ultima lista emitida por la base local. */
+    private var productos: List<Producto>? = null
+
     init {
-        cargar()
-    }
-
-    // ---------- Lectura ----------
-
-    fun cargar() {
+        // Offline-first: la pantalla se suscribe una vez a la base local y se
+        // actualiza sola. Nunca se vuelve a pedir la lista a mano.
         viewModelScope.launch {
-            _uiState.update { it.copy(fase = ProductoUiState.Fase.Cargando) }
-            val fase = runCatchingSuspend { repositorio.listar() }.fold(
-                onSuccess = { lista ->
-                    if (lista.isEmpty()) ProductoUiState.Fase.SinProductos
-                    else ProductoUiState.Fase.ConProductos(lista)
-                },
-                onFailure = { ProductoUiState.Fase.Error(it.comoErrorApi().mensaje) }
-            )
-            _uiState.update { it.copy(fase = fase) }
-            if (_uiState.value.categorias.isEmpty()) cargarCategorias()
+            repositorio.observar().collect { lista ->
+                productos = lista
+                _uiState.update { it.copy(fase = faseDe(lista, it)) }
+            }
         }
+        viewModelScope.launch {
+            repositorio.observarCategorias().collect { categorias ->
+                _uiState.update { it.copy(categorias = categorias) }
+            }
+        }
+        viewModelScope.launch {
+            repositorio.observarUltimaSincronizacion().collect { ultima ->
+                _uiState.update { it.copy(ultimaSincronizacion = ultima) }
+            }
+        }
+        sincronizar()
     }
 
-    private suspend fun cargarCategorias() {
-        runCatchingSuspend { repositorio.listarCategorias() }
-            .onSuccess { categorias -> _uiState.update { it.copy(categorias = categorias) } }
+    private fun faseDe(lista: List<Producto>?, estado: ProductoUiState): ProductoUiState.Fase = when {
+        lista == null -> ProductoUiState.Fase.Cargando
+        lista.isNotEmpty() -> ProductoUiState.Fase.ConProductos(lista)
+        // Primera apertura: aun no hay datos locales y se esta consultando al servidor.
+        estado.sincronizando && estado.ultimaSincronizacion == null -> ProductoUiState.Fase.Cargando
+        else -> ProductoUiState.Fase.SinProductos
+    }
+
+    // ---------- Sincronizacion ----------
+
+    fun sincronizar() {
+        if (_uiState.value.sincronizando) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(sincronizando = true).let { e -> e.copy(fase = faseDe(productos, e)) } }
+            val resultado = runCatchingSuspend { repositorio.sincronizar() }
+            _uiState.update { estado ->
+                val error = resultado.exceptionOrNull()?.comoErrorApi()
+                val aviso = when (error) {
+                    null -> null
+                    ErrorApi.SinConexion, ErrorApi.TiempoAgotado -> "Sin conexion: mostrando los datos guardados en el dispositivo."
+                    else -> error.mensaje
+                }
+                estado.copy(sincronizando = false, avisoRed = aviso).let { e -> e.copy(fase = faseDe(productos, e)) }
+            }
+        }
     }
 
     fun onPestana(indice: Int) = _uiState.update { it.copy(pestana = indice) }
@@ -82,7 +108,7 @@ class ProductoViewModel(
     private fun actualizarFormulario(cambio: (FormularioProducto) -> FormularioProducto) =
         _uiState.update { it.copy(formulario = cambio(it.formulario)) }
 
-    // ---------- Escritura: POST / PUT ----------
+    // ---------- Escritura ----------
 
     fun guardar() {
         if (_uiState.value.ocupado) return
@@ -91,15 +117,19 @@ class ProductoViewModel(
             _uiState.update { it.copy(operacion = ProductoUiState.Operacion.Guardando) }
             registrarProducto(f.idEnEdicion, f.nombre, f.precio, f.stock, f.activo, f.categoriaId).fold(
                 onSuccess = { producto ->
-                    val accion = if (f.idEnEdicion == null) "registrado" else "actualizado"
+                    val accion = when {
+                        producto.pendiente -> "guardado sin conexion; se enviara al sincronizar"
+                        f.idEnEdicion == null -> "registrado correctamente"
+                        else -> "actualizado correctamente"
+                    }
+                    // No se recarga nada: la base local emite y la lista se actualiza sola.
                     _uiState.update {
                         it.copy(
                             operacion = ProductoUiState.Operacion.Ninguna,
                             formulario = FormularioProducto(),
-                            mensaje = "Producto \"${producto.nombre}\" $accion correctamente"
+                            mensaje = "Producto \"${producto.nombre}\" $accion"
                         )
                     }
-                    cargar()
                 },
                 onFailure = { fallo -> mostrarErrorDeGuardado(fallo) }
             )
@@ -137,8 +167,6 @@ class ProductoViewModel(
         }
     }
 
-    // ---------- Escritura: DELETE ----------
-
     fun pedirEliminar(producto: Producto) = _uiState.update { it.copy(productoAEliminar = producto) }
 
     fun cancelarEliminar() = _uiState.update { it.copy(productoAEliminar = null) }
@@ -149,20 +177,16 @@ class ProductoViewModel(
             _uiState.update {
                 it.copy(productoAEliminar = null, operacion = ProductoUiState.Operacion.Eliminando(producto.id))
             }
-            runCatchingSuspend { repositorio.eliminar(producto.id) }.fold(
-                onSuccess = {
-                    _uiState.update {
-                        it.copy(operacion = ProductoUiState.Operacion.Ninguna,
-                            mensaje = "Producto \"${producto.nombre}\" eliminado")
-                    }
-                    cargar()
-                },
-                onFailure = { fallo ->
-                    _uiState.update {
-                        it.copy(operacion = ProductoUiState.Operacion.Ninguna, mensaje = fallo.comoErrorApi().mensaje)
-                    }
-                }
-            )
+            val resultado = runCatchingSuspend { repositorio.eliminar(producto.id) }
+            _uiState.update {
+                it.copy(
+                    operacion = ProductoUiState.Operacion.Ninguna,
+                    mensaje = resultado.fold(
+                        onSuccess = { "Producto \"${producto.nombre}\" eliminado" },
+                        onFailure = { fallo -> fallo.comoErrorApi().mensaje }
+                    )
+                )
+            }
         }
     }
 }
