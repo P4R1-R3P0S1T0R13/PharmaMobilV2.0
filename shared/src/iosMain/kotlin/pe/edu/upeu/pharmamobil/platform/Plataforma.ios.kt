@@ -1,6 +1,10 @@
 package pe.edu.upeu.pharmamobil.platform
 
+import platform.Foundation.NSDate
 import platform.Foundation.NSLocale
+import platform.Foundation.currentLocale
+import platform.Foundation.languageCode
+import platform.Foundation.timeIntervalSince1970
 import platform.Foundation.NSNumber
 import platform.Foundation.NSNumberFormatter
 import platform.Foundation.NSNumberFormatterCurrencyStyle
@@ -19,8 +23,10 @@ actual fun infoDispositivo(): InfoDispositivo = InfoDispositivo(
     sistema = UIDevice.currentDevice.systemName(),
     version = UIDevice.currentDevice.systemVersion,
     modelo = UIDevice.currentDevice.model,
-    idioma = NSLocale.currentLocale.localeIdentifier
+    idioma = NSLocale.currentLocale.languageCode
 )
+
+actual fun ahoraMs(): Long = (NSDate().timeIntervalSince1970 * 1000).toLong()
 
 /** iOS: UIActivityViewController (hoja de compartir) sobre la ventana actual. */
 class CompartidorIos : Compartidor {

@@ -10,9 +10,12 @@ import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.plugins.logging.SIMPLE
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import pe.edu.upeu.pharmamobil.data.auth.AutenticacionJwt
+import pe.edu.upeu.pharmamobil.data.auth.GestorSesion
 
 /** URL del backend segun la plataforma (la provee el platformModule). */
 data class ConfiguracionApi(val urlBase: String)
@@ -27,13 +30,22 @@ val JsonPharma = Json {
  * Cliente HTTP comun. El motor (OkHttp en Android, Darwin en iOS) llega
  * desde cada plataforma; todo lo demas se configura una sola vez aqui.
  */
-fun crearHttpClient(engine: HttpClientEngine, configuracion: ConfiguracionApi): HttpClient =
+fun crearHttpClient(
+    engine: HttpClientEngine,
+    configuracion: ConfiguracionApi,
+    gestorSesion: GestorSesion? = null
+): HttpClient =
     HttpClient(engine) {
         expectSuccess = true
+        if (gestorSesion != null) {
+            install(AutenticacionJwt) { gestor = gestorSesion }
+        }
         install(ContentNegotiation) { json(JsonPharma) }
         install(Logging) {
             logger = Logger.SIMPLE
             level = LogLevel.ALL
+            // El token nunca aparece completo en el log: "Authorization: ***".
+            sanitizeHeader { encabezado -> encabezado == HttpHeaders.Authorization }
         }
         install(HttpTimeout) {
             connectTimeoutMillis = 10_000

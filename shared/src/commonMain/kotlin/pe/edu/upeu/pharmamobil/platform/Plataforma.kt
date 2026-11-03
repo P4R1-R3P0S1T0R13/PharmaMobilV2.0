@@ -18,6 +18,9 @@ data class InfoDispositivo(
 
 expect fun infoDispositivo(): InfoDispositivo
 
+/** Hora actual en milisegundos desde 1970 (para la expiracion del token). */
+expect fun ahoraMs(): Long
+
 /**
  * Compartir necesita el Context de Android o el ViewController de iOS, que
  * no existen en commonMain: por eso es una interfaz cuya implementacion

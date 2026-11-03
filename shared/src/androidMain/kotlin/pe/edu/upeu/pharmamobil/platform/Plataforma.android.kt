@@ -16,6 +16,8 @@ actual fun infoDispositivo(): InfoDispositivo = InfoDispositivo(
     idioma = Locale.getDefault().toLanguageTag()
 )
 
+actual fun ahoraMs(): Long = System.currentTimeMillis()
+
 /** Android: Intent ACTION_SEND con el selector del sistema. */
 class CompartidorAndroid(private val context: Context) : Compartidor {
     override fun compartir(texto: String) {
