@@ -66,6 +66,8 @@ fun ProductoScreen(
     viewModel: ProductoViewModel,
     modifier: Modifier = Modifier,
     formatearPrecio: (Double) -> String = { "S/ $it" },
+    /** false para roles sin CATALOGO_ESCRIBIR (VENDEDOR): oculta crear, editar y eliminar. */
+    puedeEscribir: Boolean = true,
     accionesExtra: @Composable (Producto) -> Unit = {}
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
@@ -83,7 +85,7 @@ fun ProductoScreen(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
-            if (!estado.formulario.visible) {
+            if (puedeEscribir && !estado.formulario.visible) {
                 ExtendedFloatingActionButton(
                     onClick = viewModel::nuevo,
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
@@ -125,6 +127,7 @@ fun ProductoScreen(
                     productos = fase.productos,
                     estado = estado,
                     formatearPrecio = formatearPrecio,
+                    puedeEscribir = puedeEscribir,
                     onPestana = viewModel::onPestana,
                     onEditar = viewModel::editar,
                     onEliminar = viewModel::pedirEliminar,
@@ -217,6 +220,7 @@ private fun ListaConPestanas(
     productos: List<Producto>,
     estado: ProductoUiState,
     formatearPrecio: (Double) -> String,
+    puedeEscribir: Boolean,
     onPestana: (Int) -> Unit,
     onEditar: (Producto) -> Unit,
     onEliminar: (Producto) -> Unit,
@@ -242,14 +246,16 @@ private fun ListaConPestanas(
                 ProductoItem(producto, formatearPrecio) {
                     Row {
                         accionesExtra(producto)
-                        IconButton(onClick = { onEditar(producto) }, enabled = !estado.ocupado) {
-                            Icon(Icons.Default.Edit, contentDescription = "Editar")
-                        }
-                        if (eliminando) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(2.dp))
-                        } else {
-                            IconButton(onClick = { onEliminar(producto) }, enabled = !estado.ocupado) {
-                                Icon(Icons.Default.Delete, contentDescription = "Eliminar")
+                        if (puedeEscribir) {
+                            IconButton(onClick = { onEditar(producto) }, enabled = !estado.ocupado) {
+                                Icon(Icons.Default.Edit, contentDescription = "Editar")
+                            }
+                            if (eliminando) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(2.dp))
+                            } else {
+                                IconButton(onClick = { onEliminar(producto) }, enabled = !estado.ocupado) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Eliminar")
+                                }
                             }
                         }
                     }

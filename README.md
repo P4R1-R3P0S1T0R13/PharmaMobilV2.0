@@ -100,3 +100,22 @@ Las excepciones de Ktor se traducen a `ErrorApi` (dominio) en un único punto: `
 
 Archivos: `platform/Plataforma.kt`, `platform/Plataforma.android.kt`, `platform/Plataforma.ios.kt` y los
 `PlatformModule.*.kt` de `di/`. El código de iOS está escrito pero no se compiló (requiere macOS + Xcode).
+
+## Sesión 10 · Autenticación
+
+- **Login:** `POST /api/v1/auth/login` → `token` JWT, `expiraEnSegundos`, `roles` y `permisos`.
+- **Protección de solicitudes:** el plugin `AutenticacionJwt` (`data/auth/PluginAutenticacion.kt`) agrega
+  `Authorization: Bearer <token>` a cada petición y, ante un **401** de una petición con token, cierra la sesión.
+- **Almacenamiento seguro:** `AlmacenSeguroAndroid` (AES-256/GCM con clave en Android Keystore) y
+  `AlmacenSeguroIos` (Keychain). El token nunca se guarda en texto plano.
+- **Log saneado:** `sanitizeHeader` muestra `Authorization: ***` en el registro de Ktor.
+- **Permisos en la interfaz:** sin `CATALOGO_ESCRIBIR` se ocultan Nuevo, Editar y Eliminar.
+  "Probar acceso a reportes" (Inicio) provoca un 403 con cualquier rol que no sea ADMIN.
+
+| Usuario | Contraseña | Rol |
+|---|---|---|
+| `admin` | `Admin123` | ADMIN |
+| `vendedor` | `Vendedor123` | VENDEDOR |
+| `almacen` | `Almacen123` | ALMACENERO |
+
+Para probar la expiración, arrancar PharmaSoft con `JWT_EXPIRACION_MINUTOS=2`.
