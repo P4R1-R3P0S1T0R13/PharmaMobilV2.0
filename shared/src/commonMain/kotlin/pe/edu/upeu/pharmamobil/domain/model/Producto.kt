@@ -3,13 +3,17 @@ package pe.edu.upeu.pharmamobil.domain.model
 /**
  * Producto del inventario. Es inmutable: para cambiar el stock se usa
  * copy(stock = ...) y se obtiene un objeto nuevo.
+ *
+ * categoriaId es obligatorio en PharmaSoft (productos.categoria_id NOT NULL).
  */
 data class Producto(
     val id: Long,
     val nombre: String,
     val precio: Double,
     val stock: Int,
-    val activo: Boolean = true
+    val activo: Boolean = true,
+    val categoriaId: Long = 0,
+    val categoriaNombre: String? = null
 ) {
     init {
         require(nombre.isNotBlank()) { "El nombre del producto es obligatorio" }
