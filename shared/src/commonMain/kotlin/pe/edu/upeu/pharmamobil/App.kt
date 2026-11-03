@@ -40,6 +40,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import org.koin.compose.KoinContext
+import org.koin.compose.viewmodel.koinViewModel
 import pe.edu.upeu.pharmamobil.navigation.Screen
 import pe.edu.upeu.pharmamobil.presentation.cliente.ClienteScreen
 import pe.edu.upeu.pharmamobil.presentation.inicio.InicioScreen
@@ -54,7 +56,7 @@ private val ScreenSaver = Saver<Screen, Int>(
 )
 
 @Composable
-fun App() {
+fun App() = KoinContext {
     var pantallaActual by rememberSaveable(stateSaver = ScreenSaver) { mutableStateOf<Screen>(Screen.Inicio) }
     var darkTheme by rememberSaveable { mutableStateOf(false) }
 
@@ -186,7 +188,7 @@ private fun Estructura(
         val contenido = Modifier.padding(padding)
         when (actual) {
             Screen.Inicio -> InicioScreen(contenido)
-            Screen.Productos -> ProductoScreen(contenido)
+            Screen.Productos -> ProductoScreen(viewModel = koinViewModel(), modifier = contenido)
             Screen.Clientes -> ClienteScreen(contenido)
             Screen.Pedidos -> PedidoScreen(contenido)
         }
