@@ -6,6 +6,7 @@ import io.ktor.client.plugins.api.Send
 import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.encodedPath
 import pe.edu.upeu.pharmamobil.data.remote.OmitirAutenticacion
 
 class ConfiguracionAutenticacion {
