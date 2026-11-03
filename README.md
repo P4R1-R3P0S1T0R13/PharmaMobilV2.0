@@ -32,3 +32,16 @@ Autor: Miguel Pari
 ./gradlew :androidApp:assembleDebug     # compila la app Android
 ./gradlew :shared:testAndroidHostTest   # pruebas de commonTest en la JVM
 ```
+
+## Sesión 5 · Arquitectura Clean + MVVM
+
+```
+presentation  →  ProductoScreen · ProductoViewModel · ProductoUiState
+     ↓
+domain        →  Producto · ProductoRepository (interfaz) · RegistrarProductoUseCase
+     ↑
+data          →  ProductoRepositorioEnMemoria (implementa la interfaz)
+di            →  AppModule.kt (dataModule, domainModule, presentationModule, platformModule)
+```
+Las flechas son dependencias: `domain` no importa nada de Compose, Ktor, Android ni iOS.
+Koin arranca en `MainApplication` (Android) y en `iOSApp.swift` mediante `initKoinIos()`.
