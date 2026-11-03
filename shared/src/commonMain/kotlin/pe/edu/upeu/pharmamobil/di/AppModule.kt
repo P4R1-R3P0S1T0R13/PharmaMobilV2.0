@@ -6,14 +6,17 @@ import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import pe.edu.upeu.pharmamobil.data.auth.GestorSesion
+import pe.edu.upeu.pharmamobil.data.local.CreadorDeDriver
+import pe.edu.upeu.pharmamobil.data.local.ProductoLocal
 import pe.edu.upeu.pharmamobil.data.remote.AuthApi
 import pe.edu.upeu.pharmamobil.data.remote.DiagnosticoApi
 import pe.edu.upeu.pharmamobil.data.remote.ProductoApi
 import pe.edu.upeu.pharmamobil.data.remote.ReporteApi
 import pe.edu.upeu.pharmamobil.data.remote.crearHttpClient
 import pe.edu.upeu.pharmamobil.data.repository.AuthRepositorio
-import pe.edu.upeu.pharmamobil.data.repository.ProductoRepositorioRemoto
+import pe.edu.upeu.pharmamobil.data.repository.ProductoRepositorioOffline
 import pe.edu.upeu.pharmamobil.data.repository.ReporteRepositorio
+import pe.edu.upeu.pharmamobil.db.PharmaDb
 import pe.edu.upeu.pharmamobil.domain.repository.AuthRepository
 import pe.edu.upeu.pharmamobil.domain.repository.DiagnosticoSesion
 import pe.edu.upeu.pharmamobil.domain.repository.ProductoRepository
@@ -31,7 +34,10 @@ val dataModule = module {
     single { ProductoApi(get()) }
     single { AuthApi(get()) }
     single { ReporteApi(get()) }
-    single<ProductoRepository> { ProductoRepositorioRemoto(get()) }
+    // Sesion 11: base local como fuente de verdad.
+    single { PharmaDb(get<CreadorDeDriver>().crear()) }
+    single { ProductoLocal(get()) }
+    single<ProductoRepository> { ProductoRepositorioOffline(get(), get(), ::ahoraMs) }
     single<AuthRepository> { AuthRepositorio(get(), get(), ::ahoraMs) }
     single<ReporteRepository> { ReporteRepositorio(get()) }
     single<DiagnosticoSesion> { DiagnosticoApi(get(), get()) }

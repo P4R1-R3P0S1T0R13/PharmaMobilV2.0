@@ -23,7 +23,7 @@ val AutenticacionJwt = createClientPlugin("AutenticacionJwt", ::ConfiguracionAut
         val esLogin = request.url.encodedPath.endsWith("auth/login")
         val omitir = request.attributes.getOrNull(OmitirAutenticacion) == true
         if (!esLogin && !omitir && !request.headers.contains(HttpHeaders.Authorization)) {
-            gestor.tokenVigente()?.let { request.headers.append(HttpHeaders.Authorization, "Bearer $it") }
+            gestor.tokenActual()?.let { request.headers.append(HttpHeaders.Authorization, "Bearer $it") }
         }
     }
 

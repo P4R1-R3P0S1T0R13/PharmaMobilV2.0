@@ -13,7 +13,9 @@ data class Producto(
     val stock: Int,
     val activo: Boolean = true,
     val categoriaId: Long = 0,
-    val categoriaNombre: String? = null
+    val categoriaNombre: String? = null,
+    /** true: creado sin conexion, aun no existe en PharmaSoft (id local negativo). */
+    val pendiente: Boolean = false
 ) {
     init {
         require(nombre.isNotBlank()) { "El nombre del producto es obligatorio" }
