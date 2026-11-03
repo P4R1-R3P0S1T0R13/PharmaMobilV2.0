@@ -8,6 +8,10 @@ import java.util.Locale
 
 actual fun formatearSoles(valor: Double): String =
     NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-PE")).format(valor)
+        // CLDR separa "S/" del numero con un espacio no separable (U+00A0 o U+202F);
+        // se normaliza para que el texto sea identico en Android, iOS y en las pruebas.
+        .replace('\u00A0', ' ')
+        .replace('\u202F', ' ')
 
 actual fun infoDispositivo(): InfoDispositivo = InfoDispositivo(
     sistema = "Android",

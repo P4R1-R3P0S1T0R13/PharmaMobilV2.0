@@ -16,7 +16,10 @@ actual fun formatearSoles(valor: Double): String {
     val formateador = NSNumberFormatter()
     formateador.numberStyle = NSNumberFormatterCurrencyStyle
     formateador.locale = NSLocale(localeIdentifier = "es_PE")
-    return formateador.stringFromNumber(NSNumber(double = valor)) ?: "S/ $valor"
+    return formateador.stringFromNumber(NSNumber(double = valor))
+        ?.replace('\u00A0', ' ')
+        ?.replace('\u202F', ' ')
+        ?: "S/ $valor"
 }
 
 actual fun infoDispositivo(): InfoDispositivo = InfoDispositivo(
