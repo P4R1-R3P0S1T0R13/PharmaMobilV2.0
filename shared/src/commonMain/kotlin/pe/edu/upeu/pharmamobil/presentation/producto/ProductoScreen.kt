@@ -4,147 +4,281 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import pe.edu.upeu.pharmamobil.domain.model.Categoria
 import pe.edu.upeu.pharmamobil.domain.model.Producto
 import pe.edu.upeu.pharmamobil.presentation.components.EstadoVacio
 import pe.edu.upeu.pharmamobil.presentation.components.ValidatedTextField
 
 /**
- * La pantalla solo dibuja el estado y avisa eventos al ViewModel: no guarda
- * estado de negocio ni valida (Sesion 5).
+ * CRUD de productos. La pantalla solo dibuja el estado y avisa eventos al
+ * ViewModel; no guarda estado de negocio ni valida.
  */
 @Composable
-fun ProductoScreen(viewModel: ProductoViewModel, modifier: Modifier = Modifier) {
+fun ProductoScreen(
+    viewModel: ProductoViewModel,
+    modifier: Modifier = Modifier,
+    formatearPrecio: (Double) -> String = { "S/ $it" },
+    accionesExtra: @Composable (Producto) -> Unit = {}
+) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
+    // remember aqui es estado de UI (el host del snackbar), no de negocio.
+    val snackbar = remember { SnackbarHostState() }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        FormularioProductoSeccion(
-            formulario = estado.formulario,
-            registrando = estado.registrando,
-            mensajeExito = estado.mensajeExito,
-            onNombre = viewModel::onNombreChange,
-            onPrecio = viewModel::onPrecioChange,
-            onStock = viewModel::onStockChange,
-            onRegistrar = viewModel::registrar
-        )
-
-        when (val fase = estado.fase) {
-            ProductoUiState.Fase.Cargando -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-
-            ProductoUiState.Fase.SinProductos -> EstadoVacio(
-                icono = Icons.Default.Inventory2,
-                titulo = "Inventario vacio",
-                descripcion = "Registra tu primer producto con el formulario.",
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            is ProductoUiState.Fase.Error -> EstadoVacio(
-                icono = Icons.Default.CloudOff,
-                titulo = "No se pudo cargar",
-                descripcion = fase.mensaje,
-                modifier = Modifier.fillMaxWidth(),
-                accion = { OutlinedButton(onClick = viewModel::cargar) { Text("Reintentar") } }
-            )
-
-            is ProductoUiState.Fase.ConProductos -> ListaConPestanas(
-                productos = fase.productos,
-                pestana = estado.pestana,
-                onPestana = viewModel::onPestana
-            )
+    LaunchedEffect(estado.mensaje) {
+        estado.mensaje?.let {
+            snackbar.showSnackbar(it)
+            viewModel.mensajeMostrado()
         }
+    }
+
+    Scaffold(
+        modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbar) },
+        floatingActionButton = {
+            if (!estado.formulario.visible) {
+                ExtendedFloatingActionButton(
+                    onClick = viewModel::nuevo,
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    text = { Text("Nuevo") }
+                )
+            }
+        }
+    ) { padding ->
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            if (estado.formulario.visible) {
+                FormularioProductoSeccion(
+                    formulario = estado.formulario,
+                    categorias = estado.categorias,
+                    guardando = estado.operacion == ProductoUiState.Operacion.Guardando,
+                    viewModel = viewModel
+                )
+            }
+            when (val fase = estado.fase) {
+                ProductoUiState.Fase.Cargando -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+
+                ProductoUiState.Fase.SinProductos -> EstadoVacio(
+                    icono = Icons.Default.Inventory2,
+                    titulo = "Inventario vacio",
+                    descripcion = "Registra tu primer producto con el boton Nuevo.",
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                is ProductoUiState.Fase.Error -> EstadoVacio(
+                    icono = Icons.Default.CloudOff,
+                    titulo = "No se pudo cargar",
+                    descripcion = fase.mensaje,
+                    modifier = Modifier.fillMaxWidth(),
+                    accion = { OutlinedButton(onClick = viewModel::cargar) { Text("Reintentar") } }
+                )
+
+                is ProductoUiState.Fase.ConProductos -> ListaConPestanas(
+                    productos = fase.productos,
+                    estado = estado,
+                    formatearPrecio = formatearPrecio,
+                    onPestana = viewModel::onPestana,
+                    onEditar = viewModel::editar,
+                    onEliminar = viewModel::pedirEliminar,
+                    accionesExtra = accionesExtra
+                )
+            }
+        }
+    }
+
+    estado.productoAEliminar?.let { producto ->
+        AlertDialog(
+            onDismissRequest = viewModel::cancelarEliminar,
+            title = { Text("Eliminar producto") },
+            text = { Text("¿Eliminar \"${producto.nombre}\"? Esta accion no se puede deshacer.") },
+            confirmButton = { TextButton(onClick = viewModel::confirmarEliminar) { Text("Eliminar") } },
+            dismissButton = { TextButton(onClick = viewModel::cancelarEliminar) { Text("Cancelar") } }
+        )
     }
 }
 
 @Composable
 private fun FormularioProductoSeccion(
     formulario: FormularioProducto,
-    registrando: Boolean,
-    mensajeExito: String?,
-    onNombre: (String) -> Unit,
-    onPrecio: (String) -> Unit,
-    onStock: (String) -> Unit,
-    onRegistrar: () -> Unit
+    categorias: List<Categoria>,
+    guardando: Boolean,
+    viewModel: ProductoViewModel
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text("Registro de Producto", style = MaterialTheme.typography.titleLarge)
-        ValidatedTextField(formulario.nombre, onNombre, "Nombre del producto", formulario.nombreError, habilitado = !registrando)
-        ValidatedTextField(formulario.precio, onPrecio, "Precio", formulario.precioError,
-            tipoTeclado = KeyboardType.Decimal, habilitado = !registrando)
-        ValidatedTextField(formulario.stock, onStock, "Stock", formulario.stockError,
-            tipoTeclado = KeyboardType.Number, habilitado = !registrando)
-        Button(onClick = onRegistrar, enabled = !registrando, modifier = Modifier.fillMaxWidth()) {
-            Text(if (registrando) "REGISTRANDO..." else "REGISTRAR")
+        Text(
+            if (formulario.idEnEdicion == null) "Registro de Producto" else "Editar Producto",
+            style = MaterialTheme.typography.titleLarge
+        )
+        ValidatedTextField(formulario.nombre, viewModel::onNombreChange, "Nombre del producto",
+            formulario.nombreError, habilitado = !guardando)
+        ValidatedTextField(formulario.precio, viewModel::onPrecioChange, "Precio", formulario.precioError,
+            tipoTeclado = KeyboardType.Decimal, habilitado = !guardando)
+        ValidatedTextField(formulario.stock, viewModel::onStockChange, "Stock", formulario.stockError,
+            tipoTeclado = KeyboardType.Number, habilitado = !guardando)
+        SelectorCategoria(categorias, formulario.categoriaId, formulario.categoriaError, viewModel::onCategoriaChange)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Activo", modifier = Modifier.weight(1f))
+            Switch(checked = formulario.activo, onCheckedChange = viewModel::onActivoChange, enabled = !guardando)
         }
-        mensajeExito?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = viewModel::cancelarFormulario, enabled = !guardando, modifier = Modifier.weight(1f)) {
+                Text("CANCELAR")
+            }
+            Button(onClick = viewModel::guardar, enabled = !guardando, modifier = Modifier.weight(1f)) {
+                if (guardando) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                else Text(if (formulario.idEnEdicion == null) "REGISTRAR" else "ACTUALIZAR")
+            }
+        }
     }
 }
 
 @Composable
-private fun ListaConPestanas(productos: List<Producto>, pestana: Int, onPestana: (Int) -> Unit) {
-    val visibles = filtrarPorPestana(productos, pestana)
+private fun SelectorCategoria(
+    categorias: List<Categoria>,
+    seleccionada: Long?,
+    error: String?,
+    onSeleccion: (Long) -> Unit
+) {
+    var abierto by remember { mutableStateOf(false) }
+    val nombre = categorias.firstOrNull { it.id == seleccionada }?.nombre ?: "Seleccione una categoria"
+    Box {
+        OutlinedButton(onClick = { abierto = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(nombre, modifier = Modifier.weight(1f))
+            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+        }
+        DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
+            categorias.forEach { categoria ->
+                DropdownMenuItem(
+                    text = { Text(categoria.nombre) },
+                    onClick = {
+                        onSeleccion(categoria.id)
+                        abierto = false
+                    }
+                )
+            }
+        }
+    }
+    error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+}
+
+@Composable
+private fun ListaConPestanas(
+    productos: List<Producto>,
+    estado: ProductoUiState,
+    formatearPrecio: (Double) -> String,
+    onPestana: (Int) -> Unit,
+    onEditar: (Producto) -> Unit,
+    onEliminar: (Producto) -> Unit,
+    accionesExtra: @Composable (Producto) -> Unit
+) {
+    val visibles = filtrarPorPestana(productos, estado.pestana)
     Column {
-        PrimaryTabRow(selectedTabIndex = pestana) {
+        PrimaryTabRow(selectedTabIndex = estado.pestana) {
             PESTANAS.forEachIndexed { indice, titulo ->
                 Tab(
-                    selected = pestana == indice,
+                    selected = estado.pestana == indice,
                     onClick = { onPestana(indice) },
                     text = { Text("$titulo (${filtrarPorPestana(productos, indice).size})") }
                 )
             }
         }
         LazyColumn(
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 88.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(visibles, key = { it.id }) { producto -> ProductoItem(producto) }
+            items(visibles, key = { it.id }) { producto ->
+                val eliminando = estado.operacion == ProductoUiState.Operacion.Eliminando(producto.id)
+                ProductoItem(producto, formatearPrecio) {
+                    Row {
+                        accionesExtra(producto)
+                        IconButton(onClick = { onEditar(producto) }, enabled = !estado.ocupado) {
+                            Icon(Icons.Default.Edit, contentDescription = "Editar")
+                        }
+                        if (eliminando) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(2.dp))
+                        } else {
+                            IconButton(onClick = { onEliminar(producto) }, enabled = !estado.ocupado) {
+                                Icon(Icons.Default.Delete, contentDescription = "Eliminar")
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-fun ProductoItem(producto: Producto, acciones: @Composable () -> Unit = {}) {
+private fun ProductoItem(
+    producto: Producto,
+    formatearPrecio: (Double) -> String,
+    acciones: @Composable () -> Unit
+) {
     Card {
         ListItem(
             headlineContent = { Text(producto.nombre) },
-            supportingContent = { Text("S/ ${producto.precio} · Stock: ${producto.stock}") },
-            trailingContent = {
-                Column(horizontalAlignment = Alignment.End) {
+            overlineContent = producto.categoriaNombre?.let { { Text(it) } },
+            supportingContent = {
+                Column {
+                    Text("${formatearPrecio(producto.precio)} · Stock: ${producto.stock}")
                     when {
                         !producto.activo -> AssistChip(onClick = {}, label = { Text("Inactivo") })
                         producto.requiereReposicion -> AssistChip(onClick = {}, label = { Text("Bajo stock") })
                     }
-                    acciones()
                 }
-            }
+            },
+            trailingContent = acciones
         )
     }
 }

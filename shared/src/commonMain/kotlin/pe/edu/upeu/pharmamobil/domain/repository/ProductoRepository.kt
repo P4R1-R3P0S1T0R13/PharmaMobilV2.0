@@ -1,15 +1,25 @@
 package pe.edu.upeu.pharmamobil.domain.repository
 
+import pe.edu.upeu.pharmamobil.domain.model.Categoria
+import pe.edu.upeu.pharmamobil.domain.model.DatosProducto
 import pe.edu.upeu.pharmamobil.domain.model.Producto
 
 /**
- * Contrato del inventario en el lenguaje del negocio. El dominio no sabe si
- * los datos viven en memoria, en un servidor REST o en una base local.
+ * Contrato del inventario en el lenguaje del negocio. Los fallos llegan
+ * como ErrorApiException con un ErrorApi tipificado.
  */
 interface ProductoRepository {
 
-    /** Registra un producto nuevo; el repositorio le asigna el id. */
-    suspend fun registrar(nombre: String, precio: Double, stock: Int): Producto
-
     suspend fun listar(): List<Producto>
+
+    suspend fun obtener(id: Long): Producto
+
+    /** Registra un producto nuevo; el id lo asigna quien lo guarda. */
+    suspend fun registrar(datos: DatosProducto): Producto
+
+    suspend fun actualizar(id: Long, datos: DatosProducto): Producto
+
+    suspend fun eliminar(id: Long)
+
+    suspend fun listarCategorias(): List<Categoria>
 }
