@@ -12,6 +12,7 @@ import io.ktor.client.plugins.logging.SIMPLE
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
+import io.ktor.http.encodedPath
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import pe.edu.upeu.pharmamobil.data.auth.AutenticacionJwt
@@ -46,6 +47,8 @@ fun crearHttpClient(
             level = LogLevel.ALL
             // El token nunca aparece completo en el log: "Authorization: ***".
             sanitizeHeader { encabezado -> encabezado == HttpHeaders.Authorization }
+            // El login lleva la contrasena en el cuerpo y devuelve el token: no se registra.
+            filter { peticion -> !peticion.url.encodedPath.endsWith("auth/login") }
         }
         install(HttpTimeout) {
             connectTimeoutMillis = 10_000
