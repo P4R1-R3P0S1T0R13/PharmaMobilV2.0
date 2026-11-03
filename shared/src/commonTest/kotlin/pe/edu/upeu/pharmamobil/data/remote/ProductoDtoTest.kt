@@ -1,5 +1,6 @@
 package pe.edu.upeu.pharmamobil.data.remote
 
+import kotlinx.serialization.decodeFromString
 import pe.edu.upeu.pharmamobil.data.remote.dto.PaginaDto
 import pe.edu.upeu.pharmamobil.data.remote.dto.ProductoDto
 import pe.edu.upeu.pharmamobil.data.remote.dto.aDominio

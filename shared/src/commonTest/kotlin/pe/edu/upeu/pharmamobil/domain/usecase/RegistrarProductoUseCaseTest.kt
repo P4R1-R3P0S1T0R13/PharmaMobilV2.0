@@ -8,34 +8,35 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** Casos de validacion de la Sesion 3, ahora sobre el caso de uso. */
 class RegistrarProductoUseCaseTest {
 
-    private fun errores(n: String, p: String, s: String) = RegistrarProductoUseCase.validar(n, p, s)
+    private fun errores(n: String, p: String, s: String, c: Long? = 1) = RegistrarProductoUseCase.validar(n, p, s, c)
 
     @Test
-    fun registroValidoAsignaIdEnElRepositorio() = runTest {
+    fun registroValidoLlamaAlRepositorio() = runTest {
         val repo = FakeProductoRepository()
-        val producto = RegistrarProductoUseCase(repo)("Paracetamol", "8.50", "100").getOrThrow()
+        val producto = RegistrarProductoUseCase(repo)(null, "Paracetamol", "8.50", "100", true, 1).getOrThrow()
         assertEquals(1L, producto.id)
-        assertEquals(1, repo.llamadasRegistrar)
+        assertEquals(1, repo.llamadasGuardar)
     }
 
     @Test
     fun datosInvalidosNoLlamanAlRepositorio() = runTest {
         val repo = FakeProductoRepository()
-        val resultado = RegistrarProductoUseCase(repo)("", "abc", "-1")
+        val resultado = RegistrarProductoUseCase(repo)(null, "", "abc", "-1", true, null)
         assertTrue(resultado.exceptionOrNull() is ProductoInvalidoException)
-        assertEquals(0, repo.llamadasRegistrar)
+        assertEquals(0, repo.llamadasGuardar)
     }
 
     @Test
     fun mensajesPorCampo() {
         assertEquals("El nombre es obligatorio.", errores(" ", "8.50", "100").nombre)
+        assertEquals("El nombre debe tener al menos 3 caracteres.", errores("Ab", "8.50", "100").nombre)
         assertEquals("Ingrese un precio numérico.", errores("Ibuprofeno", "abc", "50").precio)
         assertEquals("El precio debe ser mayor que cero.", errores("Ibuprofeno", "0", "50").precio)
         assertEquals("Ingrese un stock entero.", errores("Amoxicilina", "18.50", "abc").stock)
         assertEquals("El stock no puede ser negativo.", errores("Amoxicilina", "18.50", "-5").stock)
+        assertEquals("Seleccione una categoría.", errores("Amoxicilina", "18.50", "5", null).categoria)
         assertFalse(errores("Loratadina", "10", "0").hayErrores)
     }
 

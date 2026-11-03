@@ -63,3 +63,29 @@ Logging, HttpTimeout y DefaultRequest (`data/remote/HttpClientFactory.kt`).
 dentro de `PaginaDto<T>` (`contenido`, `pagina`, `tamanio`, `totalElementos`, `totalPaginas`, `ultima`).
 
 Backend: PharmaSoft (`LEEME-LOCAL.md` de la rama `config-pari`).
+
+## Sesión 8 · CRUD REST y manejo de errores
+
+| Operación | Verbo y ruta | Respuesta |
+|---|---|---|
+| Listar | `GET /api/v1/productos` | 200 + `PaginaDto<ProductoDto>` |
+| Obtener | `GET /api/v1/productos/{id}` | 200 / 404 |
+| Crear | `POST /api/v1/productos` | 201 / 400 / 409 |
+| Actualizar | `PUT /api/v1/productos/{id}` | 200 / 400 / 404 / 409 |
+| Eliminar | `DELETE /api/v1/productos/{id}` | 204 / 404 / 409 |
+| Categorías | `GET /api/v1/categorias` | 200 + `List<CategoriaDto>` |
+
+### Manejo de errores
+Las excepciones de Ktor se traducen a `ErrorApi` (dominio) en un único punto: `data/remote/LlamadaApi.kt`.
+
+| Situación | ErrorApi | Qué ve el usuario |
+|---|---|---|
+| Modo avión / servidor apagado | `SinConexion` | Mensaje + botón Reintentar |
+| Respuesta lenta (> 15 s) | `TiempoAgotado` | Mensaje |
+| 400 validación | `Validacion(campos)` | Error debajo de cada campo |
+| 401 | `NoAutorizado` | Vuelve al login (Sesión 10) |
+| 403 | `Prohibido` | "No tiene permisos…" |
+| 404 | `NoEncontrado` | Mensaje |
+| 409 regla de negocio | `Conflicto` | Mensaje del servidor |
+| 5xx | `Servidor(codigo)` | Mensaje |
+| JSON inesperado | `RespuestaInvalida` | Mensaje |
