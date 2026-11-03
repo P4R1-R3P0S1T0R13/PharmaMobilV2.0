@@ -41,8 +41,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.koin.compose.KoinContext
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import androidx.compose.material.icons.filled.Share
+import pe.edu.upeu.pharmamobil.domain.model.textoParaCompartir
 import pe.edu.upeu.pharmamobil.navigation.Screen
+import pe.edu.upeu.pharmamobil.platform.Compartidor
+import pe.edu.upeu.pharmamobil.platform.formatearSoles
 import pe.edu.upeu.pharmamobil.presentation.cliente.ClienteScreen
 import pe.edu.upeu.pharmamobil.presentation.inicio.InicioScreen
 import pe.edu.upeu.pharmamobil.presentation.pedido.PedidoScreen
@@ -188,9 +193,25 @@ private fun Estructura(
         val contenido = Modifier.padding(padding)
         when (actual) {
             Screen.Inicio -> InicioScreen(contenido)
-            Screen.Productos -> ProductoScreen(viewModel = koinViewModel(), modifier = contenido)
+            Screen.Productos -> ProductosConCapacidadesNativas(contenido)
             Screen.Clientes -> ClienteScreen(contenido)
             Screen.Pedidos -> PedidoScreen(contenido)
         }
     }
+}
+
+/** Productos con precio en soles (expect/actual) y boton de compartir nativo. */
+@Composable
+private fun ProductosConCapacidadesNativas(modifier: Modifier) {
+    val compartidor = koinInject<Compartidor>()
+    ProductoScreen(
+        viewModel = koinViewModel(),
+        modifier = modifier,
+        formatearPrecio = ::formatearSoles,
+        accionesExtra = { producto ->
+            IconButton(onClick = { compartidor.compartir(producto.textoParaCompartir(::formatearSoles)) }) {
+                Icon(Icons.Default.Share, contentDescription = "Compartir")
+            }
+        }
+    )
 }

@@ -10,10 +10,12 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
+import pe.edu.upeu.pharmamobil.platform.infoDispositivo
 import pe.edu.upeu.pharmamobil.resources.Res
 import pe.edu.upeu.pharmamobil.resources.pharmamobil_logo
 
@@ -36,11 +38,14 @@ fun InicioScreen(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        val info = remember { infoDispositivo() }
         Card {
-            Text(
-                "Usa el menu para navegar entre los modulos.",
-                modifier = Modifier.padding(16.dp)
-            )
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Este dispositivo", style = MaterialTheme.typography.titleMedium)
+                Text("Sistema: ${info.sistema} ${info.version}")
+                Text("Modelo: ${info.modelo}")
+                Text("Idioma: ${info.idioma}")
+            }
         }
     }
 }

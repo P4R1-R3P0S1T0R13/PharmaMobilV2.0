@@ -89,3 +89,14 @@ Las excepciones de Ktor se traducen a `ErrorApi` (dominio) en un único punto: `
 | 409 regla de negocio | `Conflicto` | Mensaje del servidor |
 | 5xx | `Servidor(codigo)` | Mensaje |
 | JSON inesperado | `RespuestaInvalida` | Mensaje |
+
+## Sesión 9 · Código específico de plataforma (expect/actual)
+
+| Capacidad | Declaración (commonMain) | Android (androidMain) | iOS (iosMain) |
+|---|---|---|---|
+| Precio en soles | `expect fun formatearSoles` | `NumberFormat` con `Locale es-PE` | `NSNumberFormatter` con `es_PE` |
+| Compartir producto | `interface Compartidor` (Koin) | `Intent.ACTION_SEND` + chooser | `UIActivityViewController` |
+| Info del dispositivo | `expect fun infoDispositivo` | `android.os.Build` | `UIDevice` / `NSLocale` |
+
+Archivos: `platform/Plataforma.kt`, `platform/Plataforma.android.kt`, `platform/Plataforma.ios.kt` y los
+`PlatformModule.*.kt` de `di/`. El código de iOS está escrito pero no se compiló (requiere macOS + Xcode).
