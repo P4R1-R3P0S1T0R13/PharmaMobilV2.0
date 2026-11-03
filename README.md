@@ -131,7 +131,8 @@ Archivos: `platform/Plataforma.kt`, `platform/Plataforma.android.kt`, `platform/
   `Authorization: Bearer <token>` a cada petición y, ante un **401** de una petición con token, cierra la sesión.
 - **Almacenamiento seguro:** `AlmacenSeguroAndroid` (AES-256/GCM con clave en Android Keystore) y
   `AlmacenSeguroIos` (Keychain). El token nunca se guarda en texto plano.
-- **Log saneado:** `sanitizeHeader` muestra `Authorization: ***` en el registro de Ktor.
+- **Log saneado:** `sanitizeHeader` muestra `Authorization: ***` en el registro de Ktor, y la petición
+  `/auth/login` no se registra (su cuerpo lleva la contraseña y la respuesta, el token).
 - **Permisos en la interfaz:** sin `CATALOGO_ESCRIBIR` se ocultan Nuevo, Editar y Eliminar.
   "Probar acceso a reportes" (Inicio) provoca un 403 con cualquier rol que no sea ADMIN.
 
@@ -155,6 +156,7 @@ Para probar la expiración, arrancar PharmaSoft con `JWT_EXPIRACION_MINUTOS=2`.
   solo borra filas con `pendiente = 0`.
 - **Sin red:** lo creado se guarda con un id local negativo y se envía al reconectar. La pantalla muestra el aviso y
   "Actualizado hace …".
-- **Pruebas:** `ProductoRepositorioOfflineTest` (6 escenarios) + `ProductoViewModelTest`.
+- **Pruebas:** `ProductoRepositorioOfflineTest` (los 6 escenarios de la guía, más el registro con red que devuelve
+  el producto del servidor) + `ProductoViewModelTest`.
 
 Documentación de las actividades: `docs/sesion10/` y `docs/sesion11/`.

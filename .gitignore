@@ -10,3 +10,6 @@ local.properties
 .DS_Store
 xcuserdata/
 *.xcuserstate
+
+# Entregables de las sesiones (PDF y evidencias, solo locales)
+entregables/
