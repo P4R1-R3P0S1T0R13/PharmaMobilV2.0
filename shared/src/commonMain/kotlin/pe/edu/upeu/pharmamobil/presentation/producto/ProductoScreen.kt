@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -243,6 +244,12 @@ private fun ListaConPestanas(
     accionesExtra: @Composable (Producto) -> Unit
 ) {
     val visibles = filtrarPorPestana(productos, estado.pestana)
+    val listaEstado = rememberLazyListState()
+    // Lo creado sin red va primero (ORDER BY pendiente DESC): se sube la vista para que se vea.
+    val pendientes = productos.count { it.pendiente }
+    LaunchedEffect(pendientes) {
+        if (pendientes > 0) listaEstado.animateScrollToItem(0)
+    }
     Column {
         PrimaryTabRow(selectedTabIndex = estado.pestana) {
             PESTANAS.forEachIndexed { indice, titulo ->
@@ -254,6 +261,7 @@ private fun ListaConPestanas(
             }
         }
         LazyColumn(
+            state = listaEstado,
             contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 88.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
