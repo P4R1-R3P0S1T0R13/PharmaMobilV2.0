@@ -32,15 +32,18 @@ class ProductoRepositorioOffline(
         // 1. Primero subir: si se bajara antes, lo creado sin red se perderia.
         subirPendientes()
         // 2. Despues bajar y reemplazar solo lo que vino del servidor.
-        val productos = remoto.listar().contenido.map { it.aDominio() }
-        val categorias = remoto.listarCategorias().filter { it.estado }.map { it.aDominio() }
-        local.reemplazarSincronizados(productos, categorias, ahoraMs())
+        bajar()
     }
 
     override suspend fun registrar(datos: DatosProducto): Producto {
         val guardado = local.guardarPendiente(datos)
-        intentar { sincronizar() }
-        return guardado
+        var enviados = emptyMap<Long, Producto>()
+        intentar {
+            enviados = subirPendientes()
+            bajar()
+        }
+        // Con red se devuelve tal como quedo en PharmaSoft (id real, ya no pendiente).
+        return enviados[guardado.id] ?: guardado
     }
 
     override suspend fun actualizar(id: Long, datos: DatosProducto): Producto {
@@ -64,9 +67,11 @@ class ProductoRepositorioOffline(
         local.eliminar(id)
     }
 
-    private suspend fun subirPendientes() {
+    /** Devuelve lo que el servidor confirmo, indexado por el id local negativo. */
+    private suspend fun subirPendientes(): Map<Long, Producto> {
+        val enviados = mutableMapOf<Long, Producto>()
         local.pendientes().forEach { pendiente ->
-            remoto.crear(
+            val creado = remoto.crear(
                 DatosProducto(
                     pendiente.nombre, pendiente.precio, pendiente.stock,
                     pendiente.activo, pendiente.categoriaId
@@ -75,7 +80,15 @@ class ProductoRepositorioOffline(
             // Ya existe en PharmaSoft: la fila local con id negativo se retira y
             // vuelve en la bajada con su id real.
             local.eliminar(pendiente.id)
+            enviados[pendiente.id] = creado.aDominio()
         }
+        return enviados
+    }
+
+    private suspend fun bajar() {
+        val productos = remoto.listar().contenido.map { it.aDominio() }
+        val categorias = remoto.listarCategorias().filter { it.estado }.map { it.aDominio() }
+        local.reemplazarSincronizados(productos, categorias, ahoraMs())
     }
 
     /** Un fallo de red no debe tumbar la operacion local: queda pendiente. */

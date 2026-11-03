@@ -64,6 +64,17 @@ class ProductoRepositorioOfflineTest {
     }
 
     @Test
+    fun registroConRedDevuelveElProductoDelServidorYaNoPendiente() = runTest {
+        val servidor = ServidorSimulado()
+        val e = Escenario(servidor)
+        val guardado = e.repo.registrar(ibuprofeno)
+        assertFalse(guardado.pendiente, "Con red no debe informarse como pendiente")
+        assertTrue(guardado.id > 0, "Debe traer el id real del servidor")
+        assertEquals(1, servidor.productos.size)
+        assertEquals(1, e.repo.observar().first().size)
+    }
+
+    @Test
     fun p4LaBajadaDelServidorNoBorraLoPendiente() = runTest {
         val servidor = ServidorSimulado(listOf(dto(1, "Paracetamol")))
         val e = Escenario(servidor)
