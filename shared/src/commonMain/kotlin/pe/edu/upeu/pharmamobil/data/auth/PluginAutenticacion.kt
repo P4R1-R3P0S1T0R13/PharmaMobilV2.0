@@ -6,6 +6,7 @@ import io.ktor.client.plugins.api.Send
 import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import pe.edu.upeu.pharmamobil.data.remote.OmitirAutenticacion
 
 class ConfiguracionAutenticacion {
     var gestor: GestorSesion? = null
@@ -20,16 +21,18 @@ val AutenticacionJwt = createClientPlugin("AutenticacionJwt", ::ConfiguracionAut
 
     onRequest { request, _ ->
         val esLogin = request.url.encodedPath.endsWith("auth/login")
-        if (!esLogin && !request.headers.contains(HttpHeaders.Authorization)) {
+        val omitir = request.attributes.getOrNull(OmitirAutenticacion) == true
+        if (!esLogin && !omitir && !request.headers.contains(HttpHeaders.Authorization)) {
             gestor.tokenVigente()?.let { request.headers.append(HttpHeaders.Authorization, "Bearer $it") }
         }
     }
 
     on(Send) { request ->
-        val llevabaToken = request.headers.contains(HttpHeaders.Authorization)
+        val llevabaToken = request.headers.contains(HttpHeaders.Authorization) &&
+            request.attributes.getOrNull(OmitirAutenticacion) != true
         fun revisar(call: HttpClientCall) {
             if (llevabaToken && call.response.status == HttpStatusCode.Unauthorized) {
-                gestor.rechazadoPorServidor(null)
+                gestor.rechazadoPorServidor()
             }
         }
         try {

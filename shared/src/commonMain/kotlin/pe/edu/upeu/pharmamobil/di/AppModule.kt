@@ -7,6 +7,7 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import pe.edu.upeu.pharmamobil.data.auth.GestorSesion
 import pe.edu.upeu.pharmamobil.data.remote.AuthApi
+import pe.edu.upeu.pharmamobil.data.remote.DiagnosticoApi
 import pe.edu.upeu.pharmamobil.data.remote.ProductoApi
 import pe.edu.upeu.pharmamobil.data.remote.ReporteApi
 import pe.edu.upeu.pharmamobil.data.remote.crearHttpClient
@@ -14,6 +15,7 @@ import pe.edu.upeu.pharmamobil.data.repository.AuthRepositorio
 import pe.edu.upeu.pharmamobil.data.repository.ProductoRepositorioRemoto
 import pe.edu.upeu.pharmamobil.data.repository.ReporteRepositorio
 import pe.edu.upeu.pharmamobil.domain.repository.AuthRepository
+import pe.edu.upeu.pharmamobil.domain.repository.DiagnosticoSesion
 import pe.edu.upeu.pharmamobil.domain.repository.ProductoRepository
 import pe.edu.upeu.pharmamobil.domain.repository.ReporteRepository
 import pe.edu.upeu.pharmamobil.domain.usecase.RegistrarProductoUseCase
@@ -32,6 +34,7 @@ val dataModule = module {
     single<ProductoRepository> { ProductoRepositorioRemoto(get()) }
     single<AuthRepository> { AuthRepositorio(get(), get(), ::ahoraMs) }
     single<ReporteRepository> { ReporteRepositorio(get()) }
+    single<DiagnosticoSesion> { DiagnosticoApi(get(), get()) }
 }
 
 val domainModule = module {
@@ -41,7 +44,7 @@ val domainModule = module {
 val presentationModule = module {
     viewModel { ProductoViewModel(get(), get()) }
     viewModel { LoginViewModel(get()) }
-    viewModel { InicioViewModel(get()) }
+    viewModel { InicioViewModel(get(), get()) }
 }
 
 /** Dependencias que solo existen en una plataforma (Android o iOS). */

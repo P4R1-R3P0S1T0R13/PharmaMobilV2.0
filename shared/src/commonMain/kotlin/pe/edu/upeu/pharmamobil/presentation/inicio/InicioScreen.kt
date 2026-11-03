@@ -30,6 +30,7 @@ import pe.edu.upeu.pharmamobil.resources.pharmamobil_logo
 @Composable
 fun InicioScreen(sesion: Sesion, viewModel: InicioViewModel, modifier: Modifier = Modifier) {
     val resultadoReportes by viewModel.resultado.collectAsStateWithLifecycle()
+    val resultadoDiagnostico by viewModel.resultadoDiagnostico.collectAsStateWithLifecycle()
     val info = remember { infoDispositivo() }
 
     Column(
@@ -51,6 +52,15 @@ fun InicioScreen(sesion: Sesion, viewModel: InicioViewModel, modifier: Modifier 
             Text("Permisos: ${sesion.permisos.joinToString()}", style = MaterialTheme.typography.bodySmall)
             OutlinedButton(onClick = viewModel::probarAccesoReportes) { Text("Probar acceso a reportes") }
             resultadoReportes?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+        }
+
+        // Escenarios de la bitacora de tokens (Actividad autonoma 10).
+        Tarjeta("Pruebas de sesion") {
+            OutlinedButton(onClick = viewModel::consultarMe) { Text("1. Consultar /auth/me (token valido)") }
+            OutlinedButton(onClick = viewModel::alterarToken) { Text("3. Alterar token guardado") }
+            OutlinedButton(onClick = viewModel::sinCabecera) { Text("4. Peticion sin cabecera") }
+            OutlinedButton(onClick = viewModel::prefijoMinuscula) { Text("5. Prefijo 'bearer' en minuscula") }
+            resultadoDiagnostico?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
         }
 
         Tarjeta("Este dispositivo") {

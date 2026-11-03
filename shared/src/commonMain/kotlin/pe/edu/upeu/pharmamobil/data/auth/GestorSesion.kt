@@ -64,12 +64,22 @@ class GestorSesion(
         return sesion.token
     }
 
+    /** Escenario 3 de la bitacora: altera un caracter de la firma del token guardado. */
+    fun alterarTokenParaPrueba() {
+        val sesion = (estado.value as? EstadoSesion.Activa)?.sesion ?: return
+        // Se cambia un caracter interior de la firma: el ultimo puede llevar solo bits de relleno.
+        val posicion = (sesion.token.length - 10).coerceAtLeast(0)
+        val original = sesion.token[posicion]
+        val alterado = sesion.token.substring(0, posicion) + (if (original == 'A') 'B' else 'A') +
+            sesion.token.substring(posicion + 1)
+        iniciar(sesion.copy(token = alterado))
+    }
+
     /** Cierre por el usuario: sin motivo que mostrar. */
     fun cerrar() = terminar(null)
 
     /** El servidor rechazo el token (401): vencido, alterado o usuario deshabilitado. */
-    fun rechazadoPorServidor(mensaje: String?) =
-        terminar(mensaje ?: MENSAJE_EXPIRADA)
+    fun rechazadoPorServidor() = terminar(MENSAJE_RECHAZADA)
 
     private fun terminar(motivo: String?) {
         almacen.borrar(CLAVE)
@@ -91,5 +101,7 @@ class GestorSesion(
     companion object {
         const val CLAVE = "sesion_jwt"
         const val MENSAJE_EXPIRADA = "Tu sesion expiro. Inicia sesion nuevamente."
+        const val MENSAJE_RECHAZADA =
+            "El servidor ya no acepta tu sesion (401: token vencido, alterado o usuario deshabilitado). Inicia sesion nuevamente."
     }
 }
