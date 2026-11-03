@@ -238,8 +238,7 @@ private fun Estructura(nav: Navegacion, onMenu: (() -> Unit)?) {
         }
     ) { padding ->
         val contenido = Modifier.padding(padding)
-        // key = usuario: al cambiar de usuario se crea un ViewModel nuevo, sin datos del anterior.
-        val clave = nav.sesion.username
+        val clave = nav.sesion.claveDeVista()
         when (nav.actual) {
             Screen.Inicio -> InicioScreen(nav.sesion, koinViewModel(key = "inicio-$clave"), contenido)
             Screen.Productos -> ProductosConCapacidadesNativas(nav.sesion, contenido)
@@ -249,12 +248,18 @@ private fun Estructura(nav: Navegacion, onMenu: (() -> Unit)?) {
     }
 }
 
+/**
+ * Clave de los ViewModel: cambia en cada inicio de sesion (expiraEnMs es distinto),
+ * asi que ni otro usuario ni el mismo al volver a entrar ven datos de la sesion anterior.
+ */
+private fun Sesion.claveDeVista(): String = "$username-$expiraEnMs"
+
 /** Productos con precio en soles (expect/actual), compartir nativo y permisos por rol. */
 @Composable
 private fun ProductosConCapacidadesNativas(sesion: Sesion, modifier: Modifier) {
     val compartidor = koinInject<Compartidor>()
     ProductoScreen(
-        viewModel = koinViewModel(key = "productos-${sesion.username}"),
+        viewModel = koinViewModel(key = "productos-${sesion.claveDeVista()}"),
         modifier = modifier,
         formatearPrecio = ::formatearSoles,
         puedeEscribir = sesion.puede(Permisos.CATALOGO_ESCRIBIR),
