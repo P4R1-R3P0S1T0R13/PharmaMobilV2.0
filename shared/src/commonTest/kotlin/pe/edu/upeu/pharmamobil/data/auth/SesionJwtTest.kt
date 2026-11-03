@@ -49,21 +49,14 @@ class SesionJwtTest {
     }
 
     @Test
-    fun tokenExpiradoAlReiniciarPideLoginYSeBorra() {
+    fun tokenExpiradoNoCierraLaSesionHastaQueElServidorLoRechace() {
+        // Sesion 11: sin red, el usuario sigue viendo sus datos locales.
         gestor().iniciar(sesion)
         ahora += 61_000
         val reiniciado = gestor()
-        assertEquals(EstadoSesion.Inactiva(GestorSesion.MENSAJE_EXPIRADA), reiniciado.estado.value)
-        assertNull(almacen.leer(GestorSesion.CLAVE))
-    }
-
-    @Test
-    fun tokenQueVenceDuranteElUsoTerminaLaSesion() {
-        val g = gestor()
-        g.iniciar(sesion)
-        ahora += 61_000
-        assertNull(g.tokenVigente())
-        assertIs<EstadoSesion.Inactiva>(g.estado.value)
+        assertIs<EstadoSesion.Activa>(reiniciado.estado.value)
+        assertTrue(reiniciado.tokenVencido())
+        assertEquals(sesion.token, reiniciado.tokenActual())
     }
 
     @Test
@@ -79,7 +72,7 @@ class SesionJwtTest {
         g.iniciar(sesion)
         g.cerrar()
         assertNull(almacen.leer(GestorSesion.CLAVE))
-        assertNull(g.tokenVigente())
+        assertNull(g.tokenActual())
         assertEquals(EstadoSesion.Inactiva(null), g.estado.value)
     }
 
@@ -101,7 +94,7 @@ class SesionJwtTest {
         assertFailsWith<ErrorApiException> { api.listar() }
 
         assertEquals("Bearer ${sesion.token}", cabecera)
-        assertTrue(g.estado.value is EstadoSesion.Inactiva)
+        assertEquals(EstadoSesion.Inactiva(GestorSesion.MENSAJE_RECHAZADA), g.estado.value)
         assertNull(almacen.leer(GestorSesion.CLAVE))
     }
 }

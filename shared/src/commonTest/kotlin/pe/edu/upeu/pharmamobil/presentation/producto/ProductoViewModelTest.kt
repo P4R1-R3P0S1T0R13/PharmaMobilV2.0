@@ -16,9 +16,11 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
-/** Transiciones de estado del ViewModel frente a exito y errores tipificados. */
+/** Transiciones de estado del ViewModel suscrito al Flow de la base local. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProductoViewModelTest {
 
@@ -43,21 +45,24 @@ class ProductoViewModelTest {
     }
 
     @Test
-    fun repositorioVacioProduceSinProductos() = runTest {
+    fun servidorVacioProduceSinProductos() = runTest {
         assertIs<ProductoUiState.Fase.SinProductos>(viewModel(FakeProductoRepository()).uiState.value.fase)
     }
 
     @Test
-    fun repositorioConProductosProduceConProductos() = runTest {
+    fun alSincronizarElFlowLlevaLosProductosALaPantalla() = runTest {
         val vm = viewModel(FakeProductoRepository(FakeProductoRepository.tresProductos))
         assertEquals(3, assertIs<ProductoUiState.Fase.ConProductos>(vm.uiState.value.fase).productos.size)
         assertEquals(2, vm.uiState.value.categorias.size)
+        assertEquals(1_000L, vm.uiState.value.ultimaSincronizacion)
     }
 
     @Test
-    fun sinConexionProduceErrorConMensaje() = runTest {
-        val vm = viewModel(FakeProductoRepository(errorAlListar = ErrorApi.SinConexion))
-        assertEquals(ErrorApi.SinConexion.mensaje, assertIs<ProductoUiState.Fase.Error>(vm.uiState.value.fase).mensaje)
+    fun primeraAperturaSinRedEsEstadoVacioInformativoNoError() = runTest {
+        val vm = viewModel(FakeProductoRepository(errorAlSincronizar = ErrorApi.SinConexion))
+        assertIs<ProductoUiState.Fase.SinProductos>(vm.uiState.value.fase)
+        assertNotNull(vm.uiState.value.avisoRed)
+        assertNull(vm.uiState.value.ultimaSincronizacion)
     }
 
     @Test
@@ -72,14 +77,15 @@ class ProductoViewModelTest {
     }
 
     @Test
-    fun registroExitosoCierraFormularioYRecarga() = runTest {
-        val repo = FakeProductoRepository()
+    fun registroSinRedApareceEnLaListaComoPendienteSinRecargar() = runTest {
+        val repo = FakeProductoRepository(errorAlSincronizar = ErrorApi.SinConexion)
         val vm = viewModel(repo)
-        vm.llenar("Paracetamol", "8.50", "100")
+        vm.llenar("Ibuprofeno", "4.50", "20")
         vm.guardar()
         advanceUntilIdle()
-        assertEquals(false, vm.uiState.value.formulario.visible)
-        assertIs<ProductoUiState.Fase.ConProductos>(vm.uiState.value.fase)
+        val productos = assertIs<ProductoUiState.Fase.ConProductos>(vm.uiState.value.fase).productos
+        assertTrue(productos.single().pendiente)
+        assertTrue(vm.uiState.value.mensaje!!.contains("sin conexion"))
     }
 
     @Test
@@ -106,18 +112,16 @@ class ProductoViewModelTest {
         vm.confirmarEliminar()
         advanceUntilIdle()
         assertEquals("El producto tiene ventas registradas", vm.uiState.value.mensaje)
-        assertEquals(3, repo.productos.size)
-        assertNull(vm.uiState.value.productoAEliminar)
+        assertEquals(3, repo.local.value.size)
     }
 
     @Test
-    fun editarCargaElFormularioYActualiza() = runTest {
-        val repo = FakeProductoRepository(FakeProductoRepository.tresProductos)
-        val vm = viewModel(repo)
-        vm.editar(FakeProductoRepository.tresProductos[2])
-        vm.onStockChange("40")
-        vm.guardar()
-        advanceUntilIdle()
-        assertEquals(40, repo.productos.first { it.id == 3L }.stock)
+    fun textoDeAntiguedadEnLenguajeNatural() {
+        val hora = 3_600_000L
+        assertEquals("Aun no se sincronizo con el servidor", textoAntiguedad(null, hora))
+        assertEquals("Actualizado hace un momento", textoAntiguedad(hora, hora + 30_000))
+        assertEquals("Actualizado hace 5 minutos", textoAntiguedad(hora, hora + 5 * 60_000))
+        assertEquals("Actualizado hace 2 horas", textoAntiguedad(hora, hora + 2 * hora))
+        assertEquals("Actualizado hace 1 dia", textoAntiguedad(hora, hora + 25 * hora))
     }
 }
