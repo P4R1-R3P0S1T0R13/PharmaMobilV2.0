@@ -32,14 +32,10 @@ class GestorSesion(
 
     init {
         val guardada = leerGuardada()
-        _estado.value = when {
-            guardada == null -> EstadoSesion.Inactiva()
-            guardada.expirada(ahoraMs()) -> {
-                almacen.borrar(CLAVE)
-                EstadoSesion.Inactiva(MENSAJE_EXPIRADA)
-            }
-            else -> EstadoSesion.Activa(guardada)
-        }
+        // Sesion 11 (offline-first): un token vencido NO cierra la sesion al abrir
+        // la app. Sin red el usuario sigue viendo sus datos locales; al
+        // reconectar, el servidor responde 401 y recien ahi se pide el login.
+        _estado.value = if (guardada == null) EstadoSesion.Inactiva() else EstadoSesion.Activa(guardada)
     }
 
     fun iniciar(sesion: Sesion) {
@@ -54,15 +50,16 @@ class GestorSesion(
         _estado.value = EstadoSesion.Activa(sesion)
     }
 
-    /** Token vigente o null. Si ya vencio localmente, termina la sesion. */
-    fun tokenVigente(): String? {
-        val sesion = (estado.value as? EstadoSesion.Activa)?.sesion ?: return null
-        if (sesion.expirada(ahoraMs())) {
-            terminar(MENSAJE_EXPIRADA)
-            return null
-        }
-        return sesion.token
-    }
+    /**
+     * Token de la sesion activa, aunque haya vencido: quien decide si sigue
+     * siendo valido es el servidor (401). Asi, sin red, la app no expulsa al
+     * usuario de datos que ya tiene en el dispositivo.
+     */
+    fun tokenActual(): String? = (estado.value as? EstadoSesion.Activa)?.sesion?.token
+
+    /** true si el token ya paso su hora de expiracion (solo informativo). */
+    fun tokenVencido(): Boolean =
+        (estado.value as? EstadoSesion.Activa)?.sesion?.expirada(ahoraMs()) == true
 
     /** Escenario 3 de la bitacora: altera un caracter de la firma del token guardado. */
     fun alterarTokenParaPrueba() {

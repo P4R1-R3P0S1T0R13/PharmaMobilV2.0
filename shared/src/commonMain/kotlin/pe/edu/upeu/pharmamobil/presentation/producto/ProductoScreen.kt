@@ -17,6 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Inventory2
@@ -24,6 +26,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Surface
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -43,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,7 +58,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pe.edu.upeu.pharmamobil.domain.model.Categoria
+import kotlinx.coroutines.delay
 import pe.edu.upeu.pharmamobil.domain.model.Producto
+import pe.edu.upeu.pharmamobil.platform.ahoraMs
 import pe.edu.upeu.pharmamobil.presentation.components.EstadoVacio
 import pe.edu.upeu.pharmamobil.presentation.components.ValidatedTextField
 
@@ -95,6 +102,12 @@ fun ProductoScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            BarraSincronizacion(
+                sincronizando = estado.sincronizando,
+                aviso = estado.avisoRed,
+                ultima = estado.ultimaSincronizacion,
+                onSincronizar = viewModel::sincronizar
+            )
             if (estado.formulario.visible) {
                 FormularioProductoSeccion(
                     formulario = estado.formulario,
@@ -109,9 +122,12 @@ fun ProductoScreen(
                 }
 
                 ProductoUiState.Fase.SinProductos -> EstadoVacio(
-                    icono = Icons.Default.Inventory2,
-                    titulo = "Inventario vacio",
-                    descripcion = "Registra tu primer producto con el boton Nuevo.",
+                    icono = if (estado.avisoRed != null) Icons.Default.CloudOff else Icons.Default.Inventory2,
+                    titulo = if (estado.avisoRed != null && estado.ultimaSincronizacion == null)
+                        "Aun no hay datos guardados" else "Inventario vacio",
+                    descripcion = if (estado.avisoRed != null && estado.ultimaSincronizacion == null)
+                        "Conectate a internet una vez para descargar el inventario. Luego podras usarlo sin conexion."
+                    else "Registra tu primer producto con el boton Nuevo.",
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -120,7 +136,7 @@ fun ProductoScreen(
                     titulo = "No se pudo cargar",
                     descripcion = fase.mensaje,
                     modifier = Modifier.fillMaxWidth(),
-                    accion = { OutlinedButton(onClick = viewModel::cargar) { Text("Reintentar") } }
+                    accion = { OutlinedButton(onClick = viewModel::sincronizar) { Text("Reintentar") } }
                 )
 
                 is ProductoUiState.Fase.ConProductos -> ListaConPestanas(
@@ -279,6 +295,11 @@ private fun ProductoItem(
                 Column {
                     Text("${formatearPrecio(producto.precio)} · Stock: ${producto.stock}")
                     when {
+                        producto.pendiente -> AssistChip(
+                            onClick = {},
+                            label = { Text("Pendiente de envio") },
+                            leadingIcon = { Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                        )
                         !producto.activo -> AssistChip(onClick = {}, label = { Text("Inactivo") })
                         producto.requiereReposicion -> AssistChip(onClick = {}, label = { Text("Bajo stock") })
                     }
@@ -286,5 +307,47 @@ private fun ProductoItem(
             },
             trailingContent = acciones
         )
+    }
+}
+
+/**
+ * Antiguedad de los datos y aviso sin conexion (Sesion 11). El reloj se
+ * refresca cada minuto para que "hace X minutos" no se quede congelado.
+ */
+@Composable
+private fun BarraSincronizacion(
+    sincronizando: Boolean,
+    aviso: String?,
+    ultima: Long?,
+    onSincronizar: () -> Unit
+) {
+    var ahora by remember { mutableLongStateOf(ahoraMs()) }
+    LaunchedEffect(ultima) {
+        while (true) {
+            ahora = ahoraMs()
+            delay(60_000)
+        }
+    }
+    Surface(
+        color = if (aviso != null) MaterialTheme.colorScheme.errorContainer
+        else MaterialTheme.colorScheme.surfaceContainer
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(vertical = 8.dp)) {
+                    Text(textoAntiguedad(ultima, ahora), style = MaterialTheme.typography.bodyMedium)
+                    aviso?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+                    }
+                }
+                IconButton(onClick = onSincronizar, enabled = !sincronizando) {
+                    Icon(Icons.Default.Sync, contentDescription = "Sincronizar")
+                }
+            }
+            if (sincronizando) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
     }
 }

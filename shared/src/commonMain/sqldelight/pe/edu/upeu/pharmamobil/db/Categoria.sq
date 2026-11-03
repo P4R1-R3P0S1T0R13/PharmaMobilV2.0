@@ -1,0 +1,14 @@
+-- Categorias guardadas para poder registrar productos sin conexion.
+CREATE TABLE categoria (
+    id     INTEGER NOT NULL PRIMARY KEY,
+    nombre TEXT    NOT NULL
+);
+
+listarCategorias:
+SELECT * FROM categoria ORDER BY nombre ASC;
+
+insertarCategoria:
+INSERT OR REPLACE INTO categoria (id, nombre) VALUES (?, ?);
+
+borrarCategorias:
+DELETE FROM categoria;

@@ -6,6 +6,8 @@
 **Repositorio:** https://github.com/P4R1-R3P0S1T0R13/PharmaMobilV2.0 · rama `feature/auth-jwt-pari`
 **Plataforma de pruebas:** Android (emulador). iOS: el código está escrito (`AlmacenSeguroIos`, Keychain), pero no se verificó porque no dispongo de macOS.
 
+> **Nota (Sesión 11):** en la versión final (`master`) cambió el escenario 2. Un token vencido ya no cierra la sesión localmente: la app espera el 401 del servidor, para no expulsar al usuario cuando está sin red. Ver la Actividad Autónoma 11, escenario 5. Esta bitácora describe la rama `feature/auth-jwt-pari`.
+
 > Cómo usar este documento: las columnas **Resultado esperado** describen lo que el código implementa. Después de ejecutar cada prueba, completa **Fecha/hora**, **Observado** y la **captura**. Si lo observado no coincide con lo esperado, regístralo como hallazgo.
 
 ---

@@ -25,12 +25,12 @@ class DiagnosticoApi(
     private val gestor: GestorSesion
 ) : DiagnosticoSesion {
 
-    override suspend fun consultarMe(): String = probar(gestor.tokenVigente()?.let { "Bearer $it" })
+    override suspend fun consultarMe(): String = probar(gestor.tokenActual()?.let { "Bearer $it" })
 
     override suspend fun peticionSinCabecera(): String = probar(cabecera = null)
 
     override suspend fun peticionPrefijoMinuscula(): String =
-        probar(gestor.tokenVigente()?.let { "bearer $it" })
+        probar(gestor.tokenActual()?.let { "bearer $it" })
 
     override fun alterarToken() = gestor.alterarTokenParaPrueba()
 
