@@ -45,3 +45,21 @@ di            →  AppModule.kt (dataModule, domainModule, presentationModule, p
 ```
 Las flechas son dependencias: `domain` no importa nada de Compose, Ktor, Android ni iOS.
 Koin arranca en `MainApplication` (Android) y en `iOSApp.swift` mediante `initKoinIos()`.
+
+## Sesión 7 · Conectividad REST
+
+| Plataforma | URL base | Motor Ktor |
+|---|---|---|
+| Emulador Android | `http://10.0.2.2:8080/` | OkHttp |
+| Simulador iOS | `http://localhost:8080/` | Darwin |
+
+Se configura en `platformModule` (`androidMain` / `iosMain`). Plugins instalados: ContentNegotiation,
+Logging, HttpTimeout y DefaultRequest (`data/remote/HttpClientFactory.kt`).
+
+**Endpoint consumido:** `GET /api/v1/productos?pagina=0&tamanio=100&ordenarPor=id&direccion=asc`
+
+**DTO `ProductoDto`:** `id: Long`, `nombre: String`, `precio: Double`, `stock: Int`, `estado: Boolean`,
+`categoriaId: Long`, `categoriaNombre: String?`, `fechaCreacion: String?`, `fechaModificacion: String?`,
+dentro de `PaginaDto<T>` (`contenido`, `pagina`, `tamanio`, `totalElementos`, `totalPaginas`, `ultima`).
+
+Backend: PharmaSoft (`LEEME-LOCAL.md` de la rama `config-pari`).
