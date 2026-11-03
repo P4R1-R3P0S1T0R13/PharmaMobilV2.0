@@ -6,6 +6,29 @@ Aplicación de gestión farmacéutica (productos, clientes, pedidos e inventario
 Curso: Desarrollo de Aplicaciones Móviles · UPeU · Ciclo VI · 2026-2
 Autor: Miguel Pari
 
+## Inicio rápido
+
+1. Backend: en `pharmaSoft` (rama `config-pari`) ejecutar `docker compose up -d` y luego `.\mvnw spring-boot:run`.
+2. App: abrir este proyecto en Android Studio y ejecutar `androidApp` en el emulador
+   (la URL `http://10.0.2.2:8080/` apunta al backend de la PC).
+3. Ingresar con `admin / Admin123` (también `vendedor / Vendedor123` y `almacen / Almacen123`).
+4. Pruebas: `./gradlew :shared:testAndroidHostTest`.
+
+| Sesión | Rama | Tema |
+|---|---|---|
+| 1 | `master` (commit inicial) | Entorno, proyecto KMP y Git |
+| 2 | `feature/dominio-kmp-pari` | Dominio, null-safety, corrutinas y Flow |
+| 3 | `feature/formulario-producto-pari` | Formulario Compose con validaciones |
+| 4 | `feature/navegacion-pari` | Navegación, Material 3, tabs y diseño adaptativo |
+| 5 | `feature/clean-mvvm` | Clean + MVVM, UiState y Koin |
+| 7 | `feature/ktor-client-pari` | Cliente Ktor y GET |
+| 8 | `feature/crud-productos-pari` | CRUD REST y errores tipificados |
+| 9 | `feature/expect-actual-pari` | Capacidades nativas expect/actual |
+| 10 | `feature/auth-jwt-pari` | JWT y almacenamiento seguro |
+| 11 | `feature/offline-first-pari` | SQLDelight y offline-first |
+
+> iOS: el código de `iosMain` está escrito, pero no se compiló porque requiere macOS con Xcode.
+
 ## Sesión 1 · Entorno, proyecto base y Git
 
 | Herramienta | Versión |
