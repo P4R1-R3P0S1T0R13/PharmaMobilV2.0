@@ -37,8 +37,14 @@ kotlin {
     sourceSets {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
+            // api: MainApplication (androidApp) usa androidContext() al arrancar Koin.
+            api(libs.koin.android)
         }
         commonMain.dependencies {
+            // api: androidApp llama a initKoin(), cuya firma expone tipos de Koin.
+            api(libs.koin.core)
+            implementation(libs.koin.compose)
+            implementation(libs.koin.compose.viewmodel)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
