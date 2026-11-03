@@ -43,6 +43,7 @@ kotlin {
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
+            implementation(libs.compose.material.icons.extended)
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
             implementation(libs.compose.uiToolingPreview)
@@ -54,6 +55,11 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
         }
     }
+}
+
+compose.resources {
+    packageOfResClass = "pe.edu.upeu.pharmamobil.resources"
+    publicResClass = false
 }
 
 dependencies {

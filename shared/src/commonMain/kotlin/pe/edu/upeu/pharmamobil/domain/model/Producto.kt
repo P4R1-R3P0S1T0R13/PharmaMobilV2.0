@@ -8,7 +8,8 @@ data class Producto(
     val id: Long,
     val nombre: String,
     val precio: Double,
-    val stock: Int
+    val stock: Int,
+    val activo: Boolean = true
 ) {
     init {
         require(nombre.isNotBlank()) { "El nombre del producto es obligatorio" }
@@ -18,4 +19,16 @@ data class Producto(
 
     val disponible: Boolean
         get() = stock > 0
+
+    /**
+     * Regla de negocio: un producto activo con stock <= STOCK_MINIMO necesita
+     * reposicion. Un producto inactivo nunca se marca, aunque tenga stock 0,
+     * porque ya no se vende.
+     */
+    val requiereReposicion: Boolean
+        get() = activo && stock <= STOCK_MINIMO
+
+    companion object {
+        const val STOCK_MINIMO = 5
+    }
 }

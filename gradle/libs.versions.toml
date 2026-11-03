@@ -6,6 +6,8 @@ android-targetSdk = "36"
 androidx-activity = "1.13.0"
 androidx-lifecycle = "2.11.0-beta01"
 composeMultiplatform = "1.11.1"
+# Ultima version publicada de los iconos Material para Compose Multiplatform.
+composeMaterialIcons = "1.7.3"
 coroutines = "1.10.2"
 junit = "4.13.2"
 kotlin = "2.4.10"
@@ -23,6 +25,7 @@ compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.re
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "composeMultiplatform" }
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
+compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "composeMaterialIcons" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
 androidx-lifecycle-viewmodelCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtimeCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
