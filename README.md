@@ -119,3 +119,19 @@ Archivos: `platform/Plataforma.kt`, `platform/Plataforma.android.kt`, `platform/
 | `almacen` | `Almacen123` | ALMACENERO |
 
 Para probar la expiración, arrancar PharmaSoft con `JWT_EXPIRACION_MINUTOS=2`.
+
+## Sesión 11 · Persistencia offline-first
+
+- **Fuente de verdad:** base local SQLDelight `pharma.db` (`commonMain/sqldelight/.../db/*.sq`): tablas
+  `producto` (con la marca `pendiente`), `categoria` y `sincronizacion`.
+- **Drivers:** `AndroidSqliteDriver` y `NativeSqliteDriver` (`CreadorDeDriver` en `platformModule`);
+  `JdbcSqliteDriver` en memoria para las pruebas en la JVM.
+- **Contrato:** `ProductoRepository.observar(): Flow` + `sincronizar()`. El ViewModel se suscribe una vez y nunca
+  vuelve a pedir la lista.
+- **Sincronizar:** primero sube lo pendiente y después baja del servidor; el reemplazo va en una transacción y
+  solo borra filas con `pendiente = 0`.
+- **Sin red:** lo creado se guarda con un id local negativo y se envía al reconectar. La pantalla muestra el aviso y
+  "Actualizado hace …".
+- **Pruebas:** `ProductoRepositorioOfflineTest` (6 escenarios) + `ProductoViewModelTest`.
+
+Documentación de las actividades: `docs/sesion10/` y `docs/sesion11/`.
