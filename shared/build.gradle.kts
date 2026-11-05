@@ -43,6 +43,8 @@ kotlin {
             api(libs.koin.android)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.sqldelight.android)
+            // registerForActivityResult (PuentePermisos, Sesion 13).
+            implementation(libs.androidx.activity.compose)
         }
         commonMain.dependencies {
             // api: androidApp llama a initKoin(), cuya firma expone tipos de Koin.

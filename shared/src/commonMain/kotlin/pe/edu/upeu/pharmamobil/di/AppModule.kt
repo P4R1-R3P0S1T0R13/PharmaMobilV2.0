@@ -32,6 +32,7 @@ import pe.edu.upeu.pharmamobil.domain.usecase.SincronizarUseCase
 import pe.edu.upeu.pharmamobil.platform.ahoraMs
 import pe.edu.upeu.pharmamobil.presentation.inicio.InicioViewModel
 import pe.edu.upeu.pharmamobil.presentation.login.LoginViewModel
+import pe.edu.upeu.pharmamobil.presentation.permiso.AvisosViewModel
 import pe.edu.upeu.pharmamobil.presentation.producto.ProductoViewModel
 import pe.edu.upeu.pharmamobil.presentation.sincronizacion.SincronizacionViewModel
 
@@ -65,7 +66,8 @@ val presentationModule = module {
     viewModel { ProductoViewModel(get(), get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { InicioViewModel(get(), get()) }
-    viewModel { SincronizacionViewModel(get(), get()) }
+    viewModel { SincronizacionViewModel(get(), get(), get()) }
+    viewModel { AvisosViewModel(get()) }
 }
 
 /** Dependencias que solo existen en una plataforma (Android o iOS). */

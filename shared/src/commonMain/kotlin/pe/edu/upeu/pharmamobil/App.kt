@@ -274,7 +274,9 @@ private fun Estructura(nav: Navegacion, onMenu: (() -> Unit)?) {
         val contenido = Modifier.padding(padding)
         val clave = nav.sesion.claveDeVista()
         when (nav.actual) {
-            Screen.Inicio -> InicioScreen(nav.sesion, koinViewModel(key = "inicio-$clave"), contenido)
+            Screen.Inicio -> InicioScreen(
+                nav.sesion, koinViewModel(key = "inicio-$clave"), koinViewModel(key = "avisos-$clave"), contenido
+            )
             Screen.Productos -> ProductosConCapacidadesNativas(nav.sesion, nav.sincronizacion, contenido)
             Screen.Clientes -> ClienteScreen(contenido)
             Screen.Pedidos -> PedidoScreen(contenido)

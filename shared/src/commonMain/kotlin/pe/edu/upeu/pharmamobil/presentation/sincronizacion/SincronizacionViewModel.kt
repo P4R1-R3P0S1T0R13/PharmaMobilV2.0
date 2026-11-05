@@ -9,11 +9,14 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pe.edu.upeu.pharmamobil.domain.error.ErrorApi
 import pe.edu.upeu.pharmamobil.domain.error.comoErrorApi
+import pe.edu.upeu.pharmamobil.domain.model.Producto
 import pe.edu.upeu.pharmamobil.domain.model.ResumenSync
+import pe.edu.upeu.pharmamobil.domain.port.Notificador
 import pe.edu.upeu.pharmamobil.domain.port.Telemetria
 import pe.edu.upeu.pharmamobil.domain.repository.ProductoRepository
 import pe.edu.upeu.pharmamobil.domain.usecase.runCatchingSuspend
@@ -38,8 +41,12 @@ data class SincronizacionUiState(
  */
 class SincronizacionViewModel(
     private val repositorio: ProductoRepository,
-    private val telemetria: Telemetria
+    private val telemetria: Telemetria,
+    private val notificador: Notificador
 ) : ViewModel() {
+
+    /** Para avisar de bajo stock solo cuando aumenta, no en cada sincronizacion. */
+    private var bajoStockAvisado = 0
 
     private val enCurso = MutableStateFlow(false)
     private val ultimoResultado = MutableStateFlow(Pair(false, null as String?)) // sinConexion, error
@@ -68,6 +75,10 @@ class SincronizacionViewModel(
     /** "Reintentar ahora" sobre las filas que agotaron sus intentos. */
     fun reintentarFallidas() = ejecutar { repositorio.reintentarFallidas() }
 
+    private suspend fun avisar(resumen: ResumenSync) {
+        bajoStockAvisado = avisarInterno(resumen, repositorio, notificador, bajoStockAvisado)
+    }
+
     private fun ejecutar(operacion: suspend () -> ResumenSync) {
         if (enCurso.value) return
         viewModelScope.launch {
@@ -76,6 +87,7 @@ class SincronizacionViewModel(
             resultado.onSuccess { resumen ->
                 ultimoResultado.value = resumen.sinConexion to null
                 _resultados.tryEmit(resumen)
+                avisar(resumen)
             }.onFailure { fallo ->
                 val error = fallo.comoErrorApi()
                 val sinRed = error == ErrorApi.SinConexion || error == ErrorApi.TiempoAgotado
@@ -87,6 +99,27 @@ class SincronizacionViewModel(
             enCurso.value = false
         }
     }
+}
+
+/** Notificaciones del sistema (si el permiso no esta concedido, el notificador no hace nada). */
+private suspend fun avisarInterno(
+    resumen: ResumenSync,
+    repositorio: ProductoRepository,
+    notificador: Notificador,
+    bajoStockPrevio: Int
+): Int {
+    if (resumen.enviadas > 0) {
+        notificador.notificar("Cambios enviados", "${resumen.enviadas} cambio(s) guardados sin conexion ya estan en PharmaSoft.")
+    }
+    if (resumen.fallidas > 0) {
+        notificador.notificar("Cambios sin enviar", "${resumen.fallidas} cambio(s) no se pudieron enviar. Revisalos en Productos.")
+    }
+    if (resumen.sinConexion) return bajoStockPrevio
+    val bajoStock = repositorio.observar().first().count { it.requiereReposicion }
+    if (bajoStock > bajoStockPrevio) {
+        notificador.notificar("Bajo stock", "$bajoStock producto(s) tienen stock de ${Producto.STOCK_MINIMO} unidades o menos.")
+    }
+    return bajoStock
 }
 
 /** Linea principal de la barra: «Sin conexion · 3 cambios por enviar». */
