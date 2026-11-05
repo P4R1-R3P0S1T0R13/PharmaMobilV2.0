@@ -50,19 +50,14 @@ class ProductoViewModelTest {
     }
 
     @Test
-    fun alSincronizarElFlowLlevaLosProductosALaPantalla() = runTest {
-        val vm = viewModel(FakeProductoRepository(FakeProductoRepository.tresProductos))
+    fun alSincronizarElFlowLlevaLosProductosALaPantallaSinRecargar() = runTest {
+        val repo = FakeProductoRepository(FakeProductoRepository.tresProductos)
+        val vm = viewModel(repo)
+        // La sincronizacion la hace otro ViewModel: este solo observa la base local.
+        repo.sincronizar()
+        advanceUntilIdle()
         assertEquals(3, assertIs<ProductoUiState.Fase.ConProductos>(vm.uiState.value.fase).productos.size)
         assertEquals(2, vm.uiState.value.categorias.size)
-        assertEquals(1_000L, vm.uiState.value.ultimaSincronizacion)
-    }
-
-    @Test
-    fun primeraAperturaSinRedEsEstadoVacioInformativoNoError() = runTest {
-        val vm = viewModel(FakeProductoRepository(errorAlSincronizar = ErrorApi.SinConexion))
-        assertIs<ProductoUiState.Fase.SinProductos>(vm.uiState.value.fase)
-        assertNotNull(vm.uiState.value.avisoRed)
-        assertNull(vm.uiState.value.ultimaSincronizacion)
     }
 
     @Test

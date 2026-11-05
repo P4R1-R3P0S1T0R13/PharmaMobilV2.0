@@ -8,12 +8,14 @@ import pe.edu.upeu.pharmamobil.data.remote.ReporteApi
 import pe.edu.upeu.pharmamobil.domain.model.EstadoSesion
 import pe.edu.upeu.pharmamobil.domain.model.Sesion
 import pe.edu.upeu.pharmamobil.domain.repository.AuthRepository
+import pe.edu.upeu.pharmamobil.domain.repository.DatosLocales
 import pe.edu.upeu.pharmamobil.domain.repository.ReporteRepository
 
 class AuthRepositorio(
     private val api: AuthApi,
     private val gestor: GestorSesion,
-    private val ahoraMs: () -> Long
+    private val ahoraMs: () -> Long,
+    private val datosLocales: DatosLocales
 ) : AuthRepository {
 
     override val estado: StateFlow<EstadoSesion> = gestor.estado
@@ -28,11 +30,18 @@ class AuthRepositorio(
             permisos = respuesta.permisos,
             expiraEnMs = ahoraMs() + respuesta.expiraEnSegundos * 1000
         )
+        // Sesion 13 (H5): si entra otro usuario, no debe ver ni enviar los datos del anterior.
+        val anterior = gestor.ultimoUsuario()
+        if (anterior != null && !anterior.equals(sesion.username, ignoreCase = true)) datosLocales.borrarTodo()
         gestor.iniciar(sesion)
         return sesion
     }
 
-    override fun cerrarSesion() = gestor.cerrar()
+    /** Cierre explicito: se borra el token y tambien la base local del dispositivo. */
+    override fun cerrarSesion() {
+        datosLocales.borrarTodo()
+        gestor.cerrar()
+    }
 }
 
 class ReporteRepositorio(private val api: ReporteApi) : ReporteRepository {

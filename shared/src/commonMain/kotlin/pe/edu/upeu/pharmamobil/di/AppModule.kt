@@ -33,6 +33,7 @@ import pe.edu.upeu.pharmamobil.platform.ahoraMs
 import pe.edu.upeu.pharmamobil.presentation.inicio.InicioViewModel
 import pe.edu.upeu.pharmamobil.presentation.login.LoginViewModel
 import pe.edu.upeu.pharmamobil.presentation.producto.ProductoViewModel
+import pe.edu.upeu.pharmamobil.presentation.sincronizacion.SincronizacionViewModel
 
 /** single: una sola sesion, un solo cliente HTTP y un solo inventario para toda la app. */
 val dataModule = module {
@@ -51,7 +52,7 @@ val dataModule = module {
     single<Telemetria> { TelemetriaNula }
     factory { SincronizarUseCase(get(), get(), get()) }
     single<ProductoRepository> { ProductoRepositorioOffline(get(), get(), get()) }
-    single<AuthRepository> { AuthRepositorio(get(), get(), ::ahoraMs) }
+    single<AuthRepository> { AuthRepositorio(get(), get(), ::ahoraMs, get()) }
     single<ReporteRepository> { ReporteRepositorio(get()) }
     single<DiagnosticoSesion> { DiagnosticoApi(get(), get()) }
 }
@@ -64,6 +65,7 @@ val presentationModule = module {
     viewModel { ProductoViewModel(get(), get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { InicioViewModel(get(), get()) }
+    viewModel { SincronizacionViewModel(get(), get()) }
 }
 
 /** Dependencias que solo existen en una plataforma (Android o iOS). */

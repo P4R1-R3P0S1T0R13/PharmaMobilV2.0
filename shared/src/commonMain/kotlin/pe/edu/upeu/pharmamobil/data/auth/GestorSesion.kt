@@ -38,7 +38,11 @@ class GestorSesion(
         _estado.value = if (guardada == null) EstadoSesion.Inactiva() else EstadoSesion.Activa(guardada)
     }
 
+    /** Ultimo usuario que inicio sesion en este dispositivo (para limpiar datos al cambiar de usuario). */
+    fun ultimoUsuario(): String? = almacen.leer(CLAVE_ULTIMO_USUARIO)
+
     fun iniciar(sesion: Sesion) {
+        almacen.guardar(CLAVE_ULTIMO_USUARIO, sesion.username)
         almacen.guardar(
             CLAVE,
             JsonPharma.encodeToString(
@@ -97,6 +101,7 @@ class GestorSesion(
 
     companion object {
         const val CLAVE = "sesion_jwt"
+        const val CLAVE_ULTIMO_USUARIO = "ultimo_usuario"
         const val MENSAJE_EXPIRADA = "Tu sesion expiro. Inicia sesion nuevamente."
         const val MENSAJE_RECHAZADA =
             "El servidor ya no acepta tu sesion (401: token vencido, alterado o usuario deshabilitado). Inicia sesion nuevamente."
