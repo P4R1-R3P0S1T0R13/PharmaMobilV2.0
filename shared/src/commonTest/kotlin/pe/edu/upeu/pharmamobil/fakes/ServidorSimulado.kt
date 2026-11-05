@@ -24,6 +24,9 @@ import pe.edu.upeu.pharmamobil.data.remote.dto.ProductoRequestDto
 class ServidorSimulado(productosIniciales: List<ProductoDto> = emptyList()) {
 
     var sinRed = false
+
+    /** Sesion 13: si tiene valor, todo POST responde con ese codigo (503, 409, 400...). */
+    var estadoAlCrear: HttpStatusCode? = null
     val productos = productosIniciales.toMutableList()
     var peticionesCrear = 0
         private set
@@ -48,6 +51,12 @@ class ServidorSimulado(productosIniciales: List<ProductoDto> = emptyList()) {
                     JsonPharma.encodeToString(ListSerializer(CategoriaDto.serializer()), categorias),
                     HttpStatusCode.OK, json
                 )
+
+                request.method == HttpMethod.Post && estadoAlCrear != null -> {
+                    peticionesCrear++
+                    val estado = estadoAlCrear!!
+                    respond("""{"status":${estado.value},"message":"Respuesta forzada ${estado.value}"}""", estado, json)
+                }
 
                 request.method == HttpMethod.Post && ruta.endsWith("api/v1/productos") -> {
                     peticionesCrear++
