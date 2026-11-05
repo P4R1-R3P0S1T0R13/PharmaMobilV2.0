@@ -8,7 +8,11 @@ import pe.edu.upeu.pharmamobil.data.local.AlmacenSeguro
 import pe.edu.upeu.pharmamobil.data.local.AlmacenSeguroIos
 import pe.edu.upeu.pharmamobil.data.local.CreadorDeDriver
 import pe.edu.upeu.pharmamobil.data.local.CreadorDeDriverIos
+import pe.edu.upeu.pharmamobil.data.permiso.GestorPermisosIos
+import pe.edu.upeu.pharmamobil.data.permiso.NotificadorIos
 import pe.edu.upeu.pharmamobil.data.remote.ConfiguracionApi
+import pe.edu.upeu.pharmamobil.domain.permiso.GestorPermisos
+import pe.edu.upeu.pharmamobil.domain.port.Notificador
 import pe.edu.upeu.pharmamobil.platform.Compartidor
 import pe.edu.upeu.pharmamobil.platform.CompartidorIos
 
@@ -19,4 +23,6 @@ actual val platformModule: Module = module {
     single<Compartidor> { CompartidorIos() }
     single<AlmacenSeguro> { AlmacenSeguroIos() }
     single<CreadorDeDriver> { CreadorDeDriverIos() }
+    single<GestorPermisos> { GestorPermisosIos() }
+    single<Notificador> { NotificadorIos() }
 }

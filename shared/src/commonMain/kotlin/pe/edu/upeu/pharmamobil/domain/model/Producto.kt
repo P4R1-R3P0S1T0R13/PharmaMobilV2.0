@@ -15,13 +15,20 @@ data class Producto(
     val categoriaId: Long = 0,
     val categoriaNombre: String? = null,
     /** true: creado sin conexion, aun no existe en PharmaSoft (id local negativo). */
-    val pendiente: Boolean = false
+    val pendiente: Boolean = false,
+    /** Sesion 13: intentos de envio y ultimo motivo de fallo de una fila pendiente. */
+    val intentos: Int = 0,
+    val ultimoError: String? = null
 ) {
     init {
         require(nombre.isNotBlank()) { "El nombre del producto es obligatorio" }
         require(precio > 0.0) { "El precio debe ser mayor que cero" }
         require(stock >= 0) { "El stock no puede ser negativo" }
     }
+
+    /** Pendiente que agoto sus intentos: ya no se envia sola, el usuario decide. */
+    val fallida: Boolean
+        get() = pendiente && intentos >= PoliticaReintentos.MAX_INTENTOS
 
     val disponible: Boolean
         get() = stock > 0

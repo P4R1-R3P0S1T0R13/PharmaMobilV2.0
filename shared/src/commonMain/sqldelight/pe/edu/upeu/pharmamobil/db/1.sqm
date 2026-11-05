@@ -1,0 +1,4 @@
+-- Migracion de la version 1 (Sesion 11) a la 2 (Sesion 13): estado de envio por fila.
+-- Las bases ya instaladas en un dispositivo conservan sus datos y sus pendientes.
+ALTER TABLE producto ADD COLUMN intentos INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE producto ADD COLUMN ultimo_error TEXT;

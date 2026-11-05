@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -38,7 +39,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -64,6 +65,10 @@ import pe.edu.upeu.pharmamobil.domain.model.Producto
 import pe.edu.upeu.pharmamobil.platform.ahoraMs
 import pe.edu.upeu.pharmamobil.presentation.components.EstadoVacio
 import pe.edu.upeu.pharmamobil.presentation.components.ValidatedTextField
+import pe.edu.upeu.pharmamobil.presentation.sincronizacion.SincronizacionUiState
+import pe.edu.upeu.pharmamobil.presentation.sincronizacion.SincronizacionViewModel
+import pe.edu.upeu.pharmamobil.presentation.sincronizacion.textoEstadoSync
+import pe.edu.upeu.pharmamobil.presentation.sincronizacion.textoFallidas
 
 /**
  * CRUD de productos. La pantalla solo dibuja el estado y avisa eventos al
@@ -72,6 +77,7 @@ import pe.edu.upeu.pharmamobil.presentation.components.ValidatedTextField
 @Composable
 fun ProductoScreen(
     viewModel: ProductoViewModel,
+    sincronizacion: SincronizacionViewModel,
     modifier: Modifier = Modifier,
     formatearPrecio: (Double) -> String = { "S/ $it" },
     /** false para roles sin CATALOGO_ESCRIBIR (VENDEDOR): oculta crear, editar y eliminar. */
@@ -79,6 +85,7 @@ fun ProductoScreen(
     accionesExtra: @Composable (Producto) -> Unit = {}
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
+    val sync by sincronizacion.estado.collectAsStateWithLifecycle()
     // remember aqui es estado de UI (el host del snackbar), no de negocio.
     val snackbar = remember { SnackbarHostState() }
 
@@ -104,10 +111,10 @@ fun ProductoScreen(
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             BarraSincronizacion(
-                sincronizando = estado.sincronizando,
-                aviso = estado.avisoRed,
-                ultima = estado.ultimaSincronizacion,
-                onSincronizar = viewModel::sincronizar
+                estado = sync,
+                onSincronizar = sincronizacion::sincronizar,
+                onReintentarFallidas = sincronizacion::reintentarFallidas,
+                onRevisar = { viewModel.onPestana(PESTANA_POR_ENVIAR) }
             )
             if (estado.formulario.visible) {
                 FormularioProductoSeccion(
@@ -123,10 +130,10 @@ fun ProductoScreen(
                 }
 
                 ProductoUiState.Fase.SinProductos -> EstadoVacio(
-                    icono = if (estado.avisoRed != null) Icons.Default.CloudOff else Icons.Default.Inventory2,
-                    titulo = if (estado.avisoRed != null && estado.ultimaSincronizacion == null)
+                    icono = if (sync.sinConexion) Icons.Default.CloudOff else Icons.Default.Inventory2,
+                    titulo = if (sync.sinConexion && sync.ultimaSync == null)
                         "Aun no hay datos guardados" else "Inventario vacio",
-                    descripcion = if (estado.avisoRed != null && estado.ultimaSincronizacion == null)
+                    descripcion = if (sync.sinConexion && sync.ultimaSync == null)
                         "Conectate a internet una vez para descargar el inventario. Luego podras usarlo sin conexion."
                     else "Registra tu primer producto con el boton Nuevo.",
                     modifier = Modifier.fillMaxWidth()
@@ -137,7 +144,7 @@ fun ProductoScreen(
                     titulo = "No se pudo cargar",
                     descripcion = fase.mensaje,
                     modifier = Modifier.fillMaxWidth(),
-                    accion = { OutlinedButton(onClick = viewModel::sincronizar) { Text("Reintentar") } }
+                    accion = { OutlinedButton(onClick = sincronizacion::sincronizar) { Text("Reintentar") } }
                 )
 
                 is ProductoUiState.Fase.ConProductos -> ListaConPestanas(
@@ -251,7 +258,7 @@ private fun ListaConPestanas(
         if (pendientes > 0) listaEstado.animateScrollToItem(0)
     }
     Column {
-        PrimaryTabRow(selectedTabIndex = estado.pestana) {
+        PrimaryScrollableTabRow(selectedTabIndex = estado.pestana, edgePadding = 8.dp) {
             PESTANAS.forEachIndexed { indice, titulo ->
                 Tab(
                     selected = estado.pestana == indice,
@@ -303,6 +310,17 @@ private fun ProductoItem(
                 Column {
                     Text("${formatearPrecio(producto.precio)} · Stock: ${producto.stock}")
                     when {
+                        // Sesion 13: la fila que agoto sus intentos queda visible con su motivo.
+                        producto.fallida -> Column {
+                            AssistChip(
+                                onClick = {},
+                                label = { Text("No se pudo enviar") },
+                                leadingIcon = { Icon(Icons.Default.ErrorOutline, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            )
+                            producto.ultimoError?.let {
+                                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                            }
+                        }
                         producto.pendiente -> AssistChip(
                             onClick = {},
                             label = { Text("Pendiente de envio") },
@@ -319,26 +337,27 @@ private fun ProductoItem(
 }
 
 /**
- * Antiguedad de los datos y aviso sin conexion (Sesion 11). El reloj se
- * refresca cada minuto para que "hace X minutos" no se quede congelado.
+ * Estado de la sincronizacion (Sesiones 11 y 13): conexion, cambios por
+ * enviar, filas fallidas y antiguedad de los datos. El reloj se refresca cada
+ * minuto para que "hace X minutos" no se quede congelado.
  */
 @Composable
 private fun BarraSincronizacion(
-    sincronizando: Boolean,
-    aviso: String?,
-    ultima: Long?,
-    onSincronizar: () -> Unit
+    estado: SincronizacionUiState,
+    onSincronizar: () -> Unit,
+    onReintentarFallidas: () -> Unit,
+    onRevisar: () -> Unit
 ) {
     var ahora by remember { mutableLongStateOf(ahoraMs()) }
-    LaunchedEffect(ultima) {
+    LaunchedEffect(estado.ultimaSync) {
         while (true) {
             ahora = ahoraMs()
             delay(60_000)
         }
     }
+    val alerta = estado.sinConexion || estado.fallidas > 0 || estado.error != null
     Surface(
-        color = if (aviso != null) MaterialTheme.colorScheme.errorContainer
-        else MaterialTheme.colorScheme.surfaceContainer
+        color = if (alerta) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainer
     ) {
         Column {
             Row(
@@ -346,16 +365,36 @@ private fun BarraSincronizacion(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f).padding(vertical = 8.dp)) {
-                    Text(textoAntiguedad(ultima, ahora), style = MaterialTheme.typography.bodyMedium)
-                    aviso?.let {
+                    Text(textoEstadoSync(estado), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        textoAntiguedad(estado.ultimaSync, ahora),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    estado.error?.let {
                         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
                     }
                 }
-                IconButton(onClick = onSincronizar, enabled = !sincronizando) {
+                IconButton(onClick = onSincronizar, enabled = !estado.enCurso) {
                     Icon(Icons.Default.Sync, contentDescription = "Sincronizar")
                 }
             }
-            if (sincronizando) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            textoFallidas(estado.fallidas)?.let { texto ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        texto,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = onRevisar) { Text("Revisar") }
+                    TextButton(onClick = onReintentarFallidas, enabled = !estado.enCurso) { Text("Reintentar ahora") }
+                }
+            }
+            if (estado.enCurso) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
     }
 }

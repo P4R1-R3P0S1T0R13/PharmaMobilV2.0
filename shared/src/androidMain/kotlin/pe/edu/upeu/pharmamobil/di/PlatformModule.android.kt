@@ -9,7 +9,11 @@ import pe.edu.upeu.pharmamobil.data.local.AlmacenSeguro
 import pe.edu.upeu.pharmamobil.data.local.AlmacenSeguroAndroid
 import pe.edu.upeu.pharmamobil.data.local.CreadorDeDriver
 import pe.edu.upeu.pharmamobil.data.local.CreadorDeDriverAndroid
+import pe.edu.upeu.pharmamobil.data.permiso.GestorPermisosAndroid
+import pe.edu.upeu.pharmamobil.data.permiso.NotificadorAndroid
 import pe.edu.upeu.pharmamobil.data.remote.ConfiguracionApi
+import pe.edu.upeu.pharmamobil.domain.permiso.GestorPermisos
+import pe.edu.upeu.pharmamobil.domain.port.Notificador
 import pe.edu.upeu.pharmamobil.platform.Compartidor
 import pe.edu.upeu.pharmamobil.platform.CompartidorAndroid
 
@@ -20,4 +24,13 @@ actual val platformModule: Module = module {
     single<Compartidor> { CompartidorAndroid(androidContext()) }
     single<AlmacenSeguro> { AlmacenSeguroAndroid(androidContext()) }
     single<CreadorDeDriver> { CreadorDeDriverAndroid(androidContext()) }
+    // Sesion 13: permisos y notificaciones. MainActivity le conecta su PuentePermisos.
+    single {
+        GestorPermisosAndroid(
+            androidContext(),
+            androidContext().getSharedPreferences("pharmamobil_permisos", android.content.Context.MODE_PRIVATE)
+        )
+    }
+    single<GestorPermisos> { get<GestorPermisosAndroid>() }
+    single<Notificador> { NotificadorAndroid(androidContext()) }
 }

@@ -2,15 +2,17 @@ package pe.edu.upeu.pharmamobil.fakes
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import pe.edu.upeu.pharmamobil.domain.error.ErrorApi
 import pe.edu.upeu.pharmamobil.domain.error.ErrorApiException
 import pe.edu.upeu.pharmamobil.domain.model.Categoria
 import pe.edu.upeu.pharmamobil.domain.model.DatosProducto
 import pe.edu.upeu.pharmamobil.domain.model.Producto
+import pe.edu.upeu.pharmamobil.domain.model.ResumenSync
 import pe.edu.upeu.pharmamobil.domain.repository.ProductoRepository
 
 /**
- * Implementacion falsa del contrato offline-first para probar el ViewModel:
+ * Implementacion falsa del contrato offline-first para probar los ViewModel:
  * "local" es un StateFlow y "servidor" la lista que baja al sincronizar.
  */
 class FakeProductoRepository(
@@ -25,16 +27,32 @@ class FakeProductoRepository(
     private val categorias = MutableStateFlow<List<Categoria>>(emptyList())
     var llamadasGuardar = 0
         private set
+    var llamadasSincronizar = 0
+        private set
 
     override fun observar(): Flow<List<Producto>> = local
     override fun observarCategorias(): Flow<List<Categoria>> = categorias
     override fun observarUltimaSincronizacion(): Flow<Long?> = ultima
+    override fun observarPendientes(): Flow<Int> = local.map { lista -> lista.count { it.pendiente && !it.fallida } }
+    override fun observarFallidas(): Flow<Int> = local.map { lista -> lista.count { it.fallida } }
 
-    override suspend fun sincronizar() {
-        errorAlSincronizar?.let { throw ErrorApiException(it) }
-        local.value = local.value.filter { it.pendiente } + delServidor
+    override suspend fun sincronizar(): ResumenSync {
+        llamadasSincronizar++
+        when (val error = errorAlSincronizar) {
+            null -> Unit
+            ErrorApi.SinConexion -> return ResumenSync(pendientes = local.value.count { it.pendiente }, sinConexion = true)
+            else -> throw ErrorApiException(error)
+        }
+        val enviadas = local.value.count { it.pendiente && !it.fallida }
+        local.value = local.value.filter { it.fallida } + delServidor
         categorias.value = CATEGORIAS
         ultima.value = 1_000L
+        return ResumenSync(enviadas = enviadas, fallidas = local.value.count { it.fallida })
+    }
+
+    override suspend fun reintentarFallidas(): ResumenSync {
+        local.value = local.value.map { if (it.fallida) it.copy(intentos = 0, ultimoError = null) else it }
+        return sincronizar()
     }
 
     override suspend fun registrar(datos: DatosProducto): Producto {

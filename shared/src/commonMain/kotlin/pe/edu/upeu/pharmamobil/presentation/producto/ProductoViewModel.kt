@@ -28,11 +28,11 @@ class ProductoViewModel(
 
     init {
         // Offline-first: la pantalla se suscribe una vez a la base local y se
-        // actualiza sola. Nunca se vuelve a pedir la lista a mano.
+        // actualiza sola. La sincronizacion la lleva SincronizacionViewModel.
         viewModelScope.launch {
             repositorio.observar().collect { lista ->
                 productos = lista
-                _uiState.update { it.copy(fase = faseDe(lista, it)) }
+                _uiState.update { it.copy(fase = faseDe(lista)) }
             }
         }
         viewModelScope.launch {
@@ -40,39 +40,12 @@ class ProductoViewModel(
                 _uiState.update { it.copy(categorias = categorias) }
             }
         }
-        viewModelScope.launch {
-            repositorio.observarUltimaSincronizacion().collect { ultima ->
-                _uiState.update { it.copy(ultimaSincronizacion = ultima) }
-            }
-        }
-        sincronizar()
     }
 
-    private fun faseDe(lista: List<Producto>?, estado: ProductoUiState): ProductoUiState.Fase = when {
+    private fun faseDe(lista: List<Producto>?): ProductoUiState.Fase = when {
         lista == null -> ProductoUiState.Fase.Cargando
         lista.isNotEmpty() -> ProductoUiState.Fase.ConProductos(lista)
-        // Primera apertura: aun no hay datos locales y se esta consultando al servidor.
-        estado.sincronizando && estado.ultimaSincronizacion == null -> ProductoUiState.Fase.Cargando
         else -> ProductoUiState.Fase.SinProductos
-    }
-
-    // ---------- Sincronizacion ----------
-
-    fun sincronizar() {
-        if (_uiState.value.sincronizando) return
-        viewModelScope.launch {
-            _uiState.update { it.copy(sincronizando = true).let { e -> e.copy(fase = faseDe(productos, e)) } }
-            val resultado = runCatchingSuspend { repositorio.sincronizar() }
-            _uiState.update { estado ->
-                val error = resultado.exceptionOrNull()?.comoErrorApi()
-                val aviso = when (error) {
-                    null -> null
-                    ErrorApi.SinConexion, ErrorApi.TiempoAgotado -> "Sin conexion: mostrando los datos guardados en el dispositivo."
-                    else -> error.mensaje
-                }
-                estado.copy(sincronizando = false, avisoRed = aviso).let { e -> e.copy(fase = faseDe(productos, e)) }
-            }
-        }
     }
 
     fun onPestana(indice: Int) = _uiState.update { it.copy(pestana = indice) }

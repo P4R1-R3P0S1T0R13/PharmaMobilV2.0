@@ -13,3 +13,5 @@ xcuserdata/
 
 # Entregables de las sesiones (PDF y evidencias, solo locales)
 entregables/
+# Configuracion de Firebase de cada desarrollador (Sesion 13)
+androidApp/google-services.json

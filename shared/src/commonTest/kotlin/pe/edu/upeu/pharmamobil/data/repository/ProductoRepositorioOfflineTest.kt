@@ -6,6 +6,8 @@ import kotlinx.coroutines.test.runTest
 import pe.edu.upeu.pharmamobil.data.local.ProductoLocal
 import pe.edu.upeu.pharmamobil.data.remote.dto.aDominio
 import pe.edu.upeu.pharmamobil.domain.model.DatosProducto
+import pe.edu.upeu.pharmamobil.domain.port.TelemetriaNula
+import pe.edu.upeu.pharmamobil.domain.usecase.SincronizarUseCase
 import pe.edu.upeu.pharmamobil.fakes.ServidorSimulado
 import pe.edu.upeu.pharmamobil.fakes.ServidorSimulado.Companion.dto
 import pe.edu.upeu.pharmamobil.fakes.baseEnMemoria
@@ -25,8 +27,9 @@ class ProductoRepositorioOfflineTest {
     private val ibuprofeno = DatosProducto("Ibuprofeno 400 mg", 4.5, 20, true, 1)
 
     private class Escenario(val servidor: ServidorSimulado) {
-        val local = ProductoLocal(baseEnMemoria(), Dispatchers.Unconfined)
-        val repo = ProductoRepositorioOffline(local, servidor.api) { 1_000L }
+        val local = ProductoLocal(baseEnMemoria(), ahoraMs = { 1_000L }, dispatcher = Dispatchers.Unconfined)
+        val sincronizar = SincronizarUseCase(local, EnvioRemotoRest(servidor.api), TelemetriaNula, esperar = {})
+        val repo = ProductoRepositorioOffline(local, servidor.api, sincronizar)
     }
 
     @Test

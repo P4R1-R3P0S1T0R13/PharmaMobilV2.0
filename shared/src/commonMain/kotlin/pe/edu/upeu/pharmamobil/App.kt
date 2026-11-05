@@ -47,6 +47,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.remember
 import kotlinx.coroutines.launch
 import org.koin.compose.KoinContext
 import org.koin.compose.koinInject
@@ -64,6 +67,7 @@ import pe.edu.upeu.pharmamobil.presentation.inicio.InicioScreen
 import pe.edu.upeu.pharmamobil.presentation.login.LoginScreen
 import pe.edu.upeu.pharmamobil.presentation.pedido.PedidoScreen
 import pe.edu.upeu.pharmamobil.presentation.producto.ProductoScreen
+import pe.edu.upeu.pharmamobil.presentation.sincronizacion.SincronizacionViewModel
 import pe.edu.upeu.pharmamobil.theme.PharmaMobilTheme
 
 /** Guarda el destino actual como indice para sobrevivir a la rotacion. */
@@ -79,7 +83,9 @@ private class Navegacion(
     val sesion: Sesion,
     val navegar: (Screen) -> Unit,
     val cambiarTema: () -> Unit,
-    val cerrarSesion: () -> Unit
+    val cerrarSesion: () -> Unit,
+    /** Uno por sesion: lo comparten la barra de Productos y el aviso al cerrar sesion. */
+    val sincronizacion: SincronizacionViewModel
 )
 
 @Composable
@@ -111,7 +117,35 @@ fun App() = KoinContext {
 @Composable
 private fun Principal(sesion: Sesion, darkTheme: Boolean, cambiarTema: () -> Unit, cerrarSesion: () -> Unit) {
     var pantallaActual by rememberSaveable(stateSaver = ScreenSaver) { mutableStateOf<Screen>(Screen.Inicio) }
-    val nav = Navegacion(pantallaActual, darkTheme, sesion, { pantallaActual = it }, cambiarTema, cerrarSesion)
+    val sincronizacion: SincronizacionViewModel = koinViewModel(key = "sync-${sesion.claveDeVista()}")
+    val estadoSync by sincronizacion.estado.collectAsStateWithLifecycle()
+    var confirmarCierre by remember { mutableStateOf(false) }
+    // Sesion 13 (hueco H5): cerrar sesion borra la base local; si quedan cambios sin enviar, se avisa antes.
+    val pedirCierre: () -> Unit = {
+        if (estadoSync.cambiosSinEnviar > 0) {
+            confirmarCierre = true
+        } else {
+            cerrarSesion()
+        }
+    }
+    val nav = Navegacion(pantallaActual, darkTheme, sesion, { pantallaActual = it }, cambiarTema, pedirCierre, sincronizacion)
+
+    if (confirmarCierre) {
+        AlertDialog(
+            onDismissRequest = { confirmarCierre = false },
+            title = { Text("Cambios sin enviar") },
+            text = {
+                Text(
+                    "Tienes ${estadoSync.cambiosSinEnviar} cambio(s) que todavia no llegaron a PharmaSoft. " +
+                        "Si cierras sesion se borraran de este dispositivo."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { confirmarCierre = false; cerrarSesion() }) { Text("Cerrar sesion igual") }
+            },
+            dismissButton = { TextButton(onClick = { confirmarCierre = false }) { Text("Cancelar") } }
+        )
+    }
 
     // Navegacion adaptativa segun el ancho disponible.
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -240,8 +274,10 @@ private fun Estructura(nav: Navegacion, onMenu: (() -> Unit)?) {
         val contenido = Modifier.padding(padding)
         val clave = nav.sesion.claveDeVista()
         when (nav.actual) {
-            Screen.Inicio -> InicioScreen(nav.sesion, koinViewModel(key = "inicio-$clave"), contenido)
-            Screen.Productos -> ProductosConCapacidadesNativas(nav.sesion, contenido)
+            Screen.Inicio -> InicioScreen(
+                nav.sesion, koinViewModel(key = "inicio-$clave"), koinViewModel(key = "avisos-$clave"), contenido
+            )
+            Screen.Productos -> ProductosConCapacidadesNativas(nav.sesion, nav.sincronizacion, contenido)
             Screen.Clientes -> ClienteScreen(contenido)
             Screen.Pedidos -> PedidoScreen(contenido)
         }
@@ -256,10 +292,15 @@ private fun Sesion.claveDeVista(): String = "$username-$expiraEnMs"
 
 /** Productos con precio en soles (expect/actual), compartir nativo y permisos por rol. */
 @Composable
-private fun ProductosConCapacidadesNativas(sesion: Sesion, modifier: Modifier) {
+private fun ProductosConCapacidadesNativas(
+    sesion: Sesion,
+    sincronizacion: SincronizacionViewModel,
+    modifier: Modifier
+) {
     val compartidor = koinInject<Compartidor>()
     ProductoScreen(
         viewModel = koinViewModel(key = "productos-${sesion.claveDeVista()}"),
+        sincronizacion = sincronizacion,
         modifier = modifier,
         formatearPrecio = ::formatearSoles,
         puedeEscribir = sesion.puede(Permisos.CATALOGO_ESCRIBIR),

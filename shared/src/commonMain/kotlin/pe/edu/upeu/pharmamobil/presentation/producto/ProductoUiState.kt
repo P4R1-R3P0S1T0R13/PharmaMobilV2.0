@@ -14,13 +14,8 @@ data class ProductoUiState(
     val pestana: Int = 0,
     val operacion: Operacion = Operacion.Ninguna,
     val productoAEliminar: Producto? = null,
-    val mensaje: String? = null,
-    /** Sesion 11: sincronizacion en segundo plano con PharmaSoft. */
-    val sincronizando: Boolean = false,
-    /** Aviso persistente cuando se muestran datos locales sin conexion. */
-    val avisoRed: String? = null,
-    /** Instante de la ultima sincronizacion correcta; null si nunca se sincronizo. */
-    val ultimaSincronizacion: Long? = null
+    /** El estado de la sincronizacion vive en SincronizacionViewModel (Sesion 13). */
+    val mensaje: String? = null
 ) {
     sealed interface Fase {
         data object Cargando : Fase
@@ -55,14 +50,18 @@ data class FormularioProducto(
     val categoriaError: String? = null
 )
 
-val PESTANAS = listOf("Activos", "Inactivos", "Bajo stock")
+val PESTANAS = listOf("Activos", "Inactivos", "Bajo stock", "Por enviar")
 
-/** Filtro de cada pestana: 0 Activos, 1 Inactivos, 2 Bajo stock (stock <= 5). */
+const val PESTANA_POR_ENVIAR = 3
+
+/** Filtro de cada pestana: 0 Activos, 1 Inactivos, 2 Bajo stock (stock <= 5), 3 Por enviar. */
 fun filtrarPorPestana(productos: List<Producto>, pestana: Int): List<Producto> =
     when (pestana) {
         0 -> productos.filter { it.activo }
         1 -> productos.filter { !it.activo }
-        else -> productos.filter { it.requiereReposicion }
+        2 -> productos.filter { it.requiereReposicion }
+        // Sesion 13: lo creado sin conexion, incluidas las filas fallidas, para revisarlo.
+        else -> productos.filter { it.pendiente }
     }
 
 /** Antiguedad de los datos en lenguaje natural: "Actualizado hace 2 horas". */
