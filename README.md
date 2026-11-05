@@ -160,3 +160,26 @@ Para probar la expiración, arrancar PharmaSoft con `JWT_EXPIRACION_MINUTOS=2`.
   el producto del servidor) + `ProductoViewModelTest`.
 
 Documentación de las actividades: `docs/sesion10/` y `docs/sesion11/`.
+
+## Sesión 13 · Proyecto integrador: offline-first refinado, permisos y Firebase
+
+Rama `feature/integrador-13`. La tabla de huecos del recorrido completo está en `docs/sesion13/Tabla-de-huecos_Pari.md`.
+
+- **Cola de envío:** la tabla `producto` guarda `intentos` y `ultimo_error` (migración `1.sqm`, versión 2 de la base).
+- **Sincronización refinada** (`domain/usecase/SincronizarUseCase.kt`):
+  - Los fallos se separan en **transitorios** (tiempo agotado, 5xx, respuesta ilegible) y **permanentes** (validación, conflicto, recurso inexistente, sin privilegio).
+  - La espera entre intentos crece: 1, 2, 4, 8 y 16 s. Hay un máximo de 5 intentos.
+  - Sin conexión no gasta intentos y la sincronización se corta.
+  - Un 401 detiene la sincronización sin tocar la cola.
+  - La traducción de los errores vive en `data/repository/EnvioRemotoRest.kt`. Un 409 contra un producto idéntico se reconoce como el mismo envío, así que no se duplica.
+- **Estado en pantalla:** «Sin conexión · N cambios por enviar», «Actualizado hace…» y «N cambios no se pudieron enviar», con las acciones **Revisar** (pestaña «Por enviar») y **Reintentar ahora**. Todo sale de consultas observables de la base local (`SincronizacionViewModel`).
+- **Cierre de sesión:** se borra la base local (con aviso si quedan cambios sin enviar), y también al entrar otro usuario.
+- **Permisos:** `domain/permiso/GestorPermisos.kt`, con los estados Concedido, Denegado y DenegadoParaSiempre.
+  - Android: `GestorPermisosAndroid` + `PuentePermisos` (registrado en `MainActivity`).
+  - iOS: `GestorPermisosIos` con `UNUserNotificationCenter`.
+  - Permiso real: **notificaciones** (`POST_NOTIFICATIONS` en el manifiesto), para avisar de cambios enviados o fallidos y de bajo stock. La tarjeta de Inicio explica antes de pedir y ofrece Ajustes cuando el permiso está bloqueado. Las notificaciones no requieren clave en `Info.plist`.
+- **Firebase:** Crashlytics con el SDK de GitLive, detrás de `domain/port/Telemetria.kt`. El SDK solo aparece en `data/firebase/TelemetriaFirebase.kt`. Se activa copiando `google-services.json` a `androidApp/`; sin ese archivo, la app compila igual y la telemetría va al log. Nunca se envían el token ni datos personales.
+
+```bash
+./gradlew :shared:testAndroidHostTest   # incluye SincronizarUseCaseTest, SincronizacionViewModelTest y AvisosViewModelTest
+```
