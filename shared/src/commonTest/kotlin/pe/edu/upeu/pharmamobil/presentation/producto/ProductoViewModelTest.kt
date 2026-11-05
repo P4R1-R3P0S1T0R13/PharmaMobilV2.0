@@ -102,6 +102,7 @@ class ProductoViewModelTest {
             FakeProductoRepository.tresProductos,
             errorAlEliminar = ErrorApi.Conflicto("El producto tiene ventas registradas")
         )
+        repo.sincronizar()
         val vm = viewModel(repo)
         vm.pedirEliminar(FakeProductoRepository.tresProductos.first())
         vm.confirmarEliminar()
