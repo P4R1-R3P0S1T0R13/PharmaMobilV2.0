@@ -5,6 +5,13 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
+// Firebase (Sesion 13): los complementos se aplican solo si existe google-services.json
+// en esta carpeta. Sin el archivo la app compila igual y la telemetria va al log.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = JvmTarget.JVM_11

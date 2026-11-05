@@ -6,6 +6,7 @@ import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import pe.edu.upeu.pharmamobil.data.auth.GestorSesion
+import pe.edu.upeu.pharmamobil.data.firebase.TelemetriaFirebase
 import pe.edu.upeu.pharmamobil.data.local.CreadorDeDriver
 import pe.edu.upeu.pharmamobil.data.local.ProductoLocal
 import pe.edu.upeu.pharmamobil.data.remote.AuthApi
@@ -19,7 +20,6 @@ import pe.edu.upeu.pharmamobil.data.repository.ProductoRepositorioOffline
 import pe.edu.upeu.pharmamobil.data.repository.ReporteRepositorio
 import pe.edu.upeu.pharmamobil.db.PharmaDb
 import pe.edu.upeu.pharmamobil.domain.port.Telemetria
-import pe.edu.upeu.pharmamobil.domain.port.TelemetriaNula
 import pe.edu.upeu.pharmamobil.domain.repository.AuthRepository
 import pe.edu.upeu.pharmamobil.domain.repository.ColaSincronizacion
 import pe.edu.upeu.pharmamobil.domain.repository.DatosLocales
@@ -50,7 +50,8 @@ val dataModule = module {
     single<ColaSincronizacion> { get<ProductoLocal>() }
     single<DatosLocales> { get<ProductoLocal>() }
     single<EnvioRemoto> { EnvioRemotoRest(get()) }
-    single<Telemetria> { TelemetriaNula }
+    // Sesion 13: Firebase Crashlytics detras de la interfaz del dominio.
+    single<Telemetria> { TelemetriaFirebase() }
     factory { SincronizarUseCase(get(), get(), get()) }
     single<ProductoRepository> { ProductoRepositorioOffline(get(), get(), get()) }
     single<AuthRepository> { AuthRepositorio(get(), get(), ::ahoraMs, get()) }

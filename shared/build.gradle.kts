@@ -58,6 +58,7 @@ kotlin {
             implementation(libs.ktor.serialization.kotlinxJson)
             implementation(libs.sqldelight.runtime)
             implementation(libs.sqldelight.coroutines)
+            implementation(libs.gitlive.firebase.crashlytics)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
