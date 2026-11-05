@@ -2,6 +2,7 @@ package pe.edu.upeu.pharmamobil.data.local
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
+import app.cash.sqldelight.coroutines.mapToOne
 import app.cash.sqldelight.coroutines.mapToOneOrNull
 import app.cash.sqldelight.db.SqlDriver
 import kotlinx.coroutines.CoroutineDispatcher
@@ -11,7 +12,11 @@ import kotlinx.coroutines.flow.map
 import pe.edu.upeu.pharmamobil.db.PharmaDb
 import pe.edu.upeu.pharmamobil.domain.model.Categoria
 import pe.edu.upeu.pharmamobil.domain.model.DatosProducto
+import pe.edu.upeu.pharmamobil.domain.model.Inventario
+import pe.edu.upeu.pharmamobil.domain.model.PoliticaReintentos.MAX_INTENTOS
 import pe.edu.upeu.pharmamobil.domain.model.Producto
+import pe.edu.upeu.pharmamobil.domain.repository.ColaSincronizacion
+import pe.edu.upeu.pharmamobil.domain.repository.DatosLocales
 import pe.edu.upeu.pharmamobil.db.Producto as ProductoFila
 
 /** Cada plataforma abre el archivo de base de datos con su propio driver. */
@@ -25,11 +30,15 @@ interface CreadorDeDriver {
  */
 class ProductoLocal(
     base: PharmaDb,
+    private val ahoraMs: () -> Long = { 0L },
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default
-) {
+) : ColaSincronizacion, DatosLocales {
+
     private val productos = base.productoQueries
     private val categorias = base.categoriaQueries
     private val sincronizacion = base.sincronizacionQueries
+
+    // ---------- Lectura observable ----------
 
     fun observar(): Flow<List<Producto>> =
         productos.listarTodos().asFlow().mapToList(dispatcher).map { filas -> filas.map { it.aDominio() } }
@@ -41,9 +50,21 @@ class ProductoLocal(
     fun observarUltimaSincronizacion(): Flow<Long?> =
         sincronizacion.ultima().asFlow().mapToOneOrNull(dispatcher)
 
+    fun observarPendientes(): Flow<Int> =
+        productos.contarPendientes(MAX_INTENTOS.toLong()).asFlow().mapToOne(dispatcher).map { it.toInt() }
+
+    fun observarFallidas(): Flow<Int> =
+        productos.contarFallidas(MAX_INTENTOS.toLong()).asFlow().mapToOne(dispatcher).map { it.toInt() }
+
+    // ---------- Lectura puntual ----------
+
     fun pendientes(): List<Producto> = productos.listarPendientes().executeAsList().map { it.aDominio() }
 
+    fun porId(id: Long): Producto? = productos.porId(id).executeAsOneOrNull()?.aDominio()
+
     fun cantidad(): Long = productos.contar().executeAsOne()
+
+    // ---------- Escritura ----------
 
     /** Guarda lo creado sin conexion con un id local negativo, que el servidor nunca usa. */
     fun guardarPendiente(datos: DatosProducto): Producto {
@@ -68,6 +89,9 @@ class ProductoLocal(
 
     fun eliminar(id: Long) = productos.eliminarPorId(id)
 
+    /** Accion del usuario sobre las filas fallidas: vuelven a la cola con la cuenta en cero. */
+    fun reiniciarIntentos() = productos.reiniciarIntentos()
+
     /**
      * Reemplaza lo que vino del servidor sin tocar lo pendiente. Va en una
      * transaccion para que el Flow emita una sola vez y la lista no parpadee.
@@ -79,6 +103,40 @@ class ProductoLocal(
             categorias.borrarCategorias()
             categoriasDelServidor.forEach { categorias.insertarCategoria(it.id, it.nombre) }
             sincronizacion.guardarUltima(ahoraMs)
+        }
+    }
+
+    // ---------- ColaSincronizacion (Sesion 13) ----------
+
+    override fun pendientesPorEnviar(maxIntentos: Int): List<Producto> =
+        productos.pendientesPorEnviar(maxIntentos.toLong()).executeAsList().map { it.aDominio() }
+
+    override fun confirmar(idLocal: Long) {
+        productos.eliminarPorId(idLocal)
+    }
+
+    override fun sumarIntento(idLocal: Long, motivo: String) {
+        productos.sumarIntento(motivo = motivo, id = idLocal)
+    }
+
+    override fun marcarFallida(idLocal: Long, motivo: String, maxIntentos: Int) {
+        productos.marcarFallida(maxIntentos = maxIntentos.toLong(), motivo = motivo, id = idLocal)
+    }
+
+    override fun conciliar(inventario: Inventario) =
+        reemplazarSincronizados(inventario.productos, inventario.categorias, ahoraMs())
+
+    override fun contarPendientes(maxIntentos: Int): Int =
+        productos.contarPendientes(maxIntentos.toLong()).executeAsOne().toInt()
+
+    // ---------- DatosLocales ----------
+
+    /** Cierre de sesion o cambio de usuario: el dispositivo queda limpio. */
+    override fun borrarTodo() {
+        productos.transaction {
+            productos.borrarTodo()
+            categorias.borrarCategorias()
+            sincronizacion.borrarSincronizacion()
         }
     }
 
@@ -101,6 +159,8 @@ class ProductoLocal(
         activo = activo == 1L,
         categoriaId = categoria_id,
         categoriaNombre = categoria_nombre,
-        pendiente = pendiente == 1L
+        pendiente = pendiente == 1L,
+        intentos = intentos.toInt(),
+        ultimoError = ultimo_error
     )
 }

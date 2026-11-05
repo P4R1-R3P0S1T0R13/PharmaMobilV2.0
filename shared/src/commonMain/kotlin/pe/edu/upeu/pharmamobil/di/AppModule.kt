@@ -14,14 +14,21 @@ import pe.edu.upeu.pharmamobil.data.remote.ProductoApi
 import pe.edu.upeu.pharmamobil.data.remote.ReporteApi
 import pe.edu.upeu.pharmamobil.data.remote.crearHttpClient
 import pe.edu.upeu.pharmamobil.data.repository.AuthRepositorio
+import pe.edu.upeu.pharmamobil.data.repository.EnvioRemotoRest
 import pe.edu.upeu.pharmamobil.data.repository.ProductoRepositorioOffline
 import pe.edu.upeu.pharmamobil.data.repository.ReporteRepositorio
 import pe.edu.upeu.pharmamobil.db.PharmaDb
+import pe.edu.upeu.pharmamobil.domain.port.Telemetria
+import pe.edu.upeu.pharmamobil.domain.port.TelemetriaNula
 import pe.edu.upeu.pharmamobil.domain.repository.AuthRepository
+import pe.edu.upeu.pharmamobil.domain.repository.ColaSincronizacion
+import pe.edu.upeu.pharmamobil.domain.repository.DatosLocales
+import pe.edu.upeu.pharmamobil.domain.repository.EnvioRemoto
 import pe.edu.upeu.pharmamobil.domain.repository.DiagnosticoSesion
 import pe.edu.upeu.pharmamobil.domain.repository.ProductoRepository
 import pe.edu.upeu.pharmamobil.domain.repository.ReporteRepository
 import pe.edu.upeu.pharmamobil.domain.usecase.RegistrarProductoUseCase
+import pe.edu.upeu.pharmamobil.domain.usecase.SincronizarUseCase
 import pe.edu.upeu.pharmamobil.platform.ahoraMs
 import pe.edu.upeu.pharmamobil.presentation.inicio.InicioViewModel
 import pe.edu.upeu.pharmamobil.presentation.login.LoginViewModel
@@ -36,8 +43,14 @@ val dataModule = module {
     single { ReporteApi(get()) }
     // Sesion 11: base local como fuente de verdad.
     single { PharmaDb(get<CreadorDeDriver>().crear()) }
-    single { ProductoLocal(get()) }
-    single<ProductoRepository> { ProductoRepositorioOffline(get(), get(), ::ahoraMs) }
+    single { ProductoLocal(get(), ::ahoraMs) }
+    // Sesion 13: la cola local y el envio remoto se exponen por sus interfaces de dominio.
+    single<ColaSincronizacion> { get<ProductoLocal>() }
+    single<DatosLocales> { get<ProductoLocal>() }
+    single<EnvioRemoto> { EnvioRemotoRest(get()) }
+    single<Telemetria> { TelemetriaNula }
+    factory { SincronizarUseCase(get(), get(), get()) }
+    single<ProductoRepository> { ProductoRepositorioOffline(get(), get(), get()) }
     single<AuthRepository> { AuthRepositorio(get(), get(), ::ahoraMs) }
     single<ReporteRepository> { ReporteRepositorio(get()) }
     single<DiagnosticoSesion> { DiagnosticoApi(get(), get()) }

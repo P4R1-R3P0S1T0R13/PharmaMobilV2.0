@@ -65,6 +65,7 @@ class ProductoViewModel(
             val resultado = runCatchingSuspend { repositorio.sincronizar() }
             _uiState.update { estado ->
                 val error = resultado.exceptionOrNull()?.comoErrorApi()
+                    ?: ErrorApi.SinConexion.takeIf { resultado.getOrNull()?.sinConexion == true }
                 val aviso = when (error) {
                     null -> null
                     ErrorApi.SinConexion, ErrorApi.TiempoAgotado -> "Sin conexion: mostrando los datos guardados en el dispositivo."
