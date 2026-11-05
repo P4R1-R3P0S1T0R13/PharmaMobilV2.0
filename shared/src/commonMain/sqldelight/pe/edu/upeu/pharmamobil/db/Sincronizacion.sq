@@ -9,3 +9,6 @@ INSERT OR REPLACE INTO sincronizacion (id, ultima_ms) VALUES (1, ?);
 
 ultima:
 SELECT ultima_ms FROM sincronizacion WHERE id = 1;
+
+borrarSincronizacion:
+DELETE FROM sincronizacion;

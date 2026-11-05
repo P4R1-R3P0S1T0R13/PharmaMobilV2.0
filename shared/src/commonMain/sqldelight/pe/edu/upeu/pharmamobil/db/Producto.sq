@@ -1,5 +1,7 @@
 -- Copia local del inventario: es la fuente de verdad de la interfaz.
 -- pendiente = 1: creado sin conexion, todavia no existe en PharmaSoft (id negativo).
+-- intentos / ultimo_error (Sesion 13): estado de envio de cada fila pendiente.
+-- Una fila con intentos >= maxIntentos se considera "fallida": no se reintenta sola.
 CREATE TABLE producto (
     id               INTEGER NOT NULL PRIMARY KEY,
     nombre           TEXT    NOT NULL,
@@ -8,7 +10,9 @@ CREATE TABLE producto (
     activo           INTEGER NOT NULL DEFAULT 1,
     categoria_id     INTEGER NOT NULL,
     categoria_nombre TEXT,
-    pendiente        INTEGER NOT NULL DEFAULT 0
+    pendiente        INTEGER NOT NULL DEFAULT 0,
+    intentos         INTEGER NOT NULL DEFAULT 0,
+    ultimo_error     TEXT
 );
 
 listarTodos:
@@ -16,6 +20,9 @@ SELECT * FROM producto ORDER BY pendiente DESC, nombre ASC;
 
 listarPendientes:
 SELECT * FROM producto WHERE pendiente = 1 ORDER BY id DESC;
+
+porId:
+SELECT * FROM producto WHERE id = ?;
 
 insertar:
 INSERT OR REPLACE INTO producto (id, nombre, precio, stock, activo, categoria_id, categoria_nombre, pendiente)
@@ -28,9 +35,34 @@ DELETE FROM producto WHERE id = ?;
 borrarSincronizados:
 DELETE FROM producto WHERE pendiente = 0;
 
+borrarTodo:
+DELETE FROM producto;
+
 -- COALESCE evita el NULL de la tabla vacia; en Kotlin se garantiza un id negativo.
 siguienteIdLocal:
 SELECT COALESCE(MIN(id), 0) FROM producto;
 
 contar:
 SELECT COUNT(*) FROM producto;
+
+-- ---------- Cola de envio (Sesion 13) ----------
+
+pendientesPorEnviar:
+SELECT * FROM producto WHERE pendiente = 1 AND intentos < :maxIntentos ORDER BY id DESC;
+
+contarPendientes:
+SELECT COUNT(*) FROM producto WHERE pendiente = 1 AND intentos < :maxIntentos;
+
+contarFallidas:
+SELECT COUNT(*) FROM producto WHERE pendiente = 1 AND intentos >= :maxIntentos;
+
+sumarIntento:
+UPDATE producto SET intentos = intentos + 1, ultimo_error = :motivo WHERE id = :id;
+
+-- Fallo permanente: se agota la cuenta de una vez para que no se reintente solo.
+marcarFallida:
+UPDATE producto SET intentos = :maxIntentos, ultimo_error = :motivo WHERE id = :id;
+
+-- Accion del usuario: "Reintentar ahora".
+reiniciarIntentos:
+UPDATE producto SET intentos = 0, ultimo_error = NULL WHERE pendiente = 1;
