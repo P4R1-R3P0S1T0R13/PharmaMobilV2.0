@@ -8,6 +8,16 @@ package pe.edu.upeu.pharmamobil.platform
 /** Precio en soles con el formato regional de Peru (es-PE). */
 expect fun formatearSoles(valor: Double): String
 
+/**
+ * Datos de la build (Sesion 14). Android los toma de BuildConfig en
+ * MainApplication; iOS, del binario y de su Info.plist.
+ */
+data class InfoApp(
+    /** false en la version de entrega: oculta las herramientas de prueba. */
+    val depuracion: Boolean,
+    val version: String
+)
+
 /** Datos del equipo en el que corre la app (tercera capacidad nativa). */
 data class InfoDispositivo(
     val sistema: String,
