@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- HTTP sin cifrar solo para el backend local de desarrollo. -->
+<!--
+  PharmaSoft corre con HTTP (sin TLS) en la red local del laboratorio: en el emulador es 10.0.2.2
+  y en un telefono real es la IP de la PC (por ejemplo 192.168.1.40), que cambia en cada red.
+  Por eso se permite el trafico sin cifrar para toda la app.
+  Limitacion declarada (Sesion 14): en produccion el servicio iria con HTTPS y esta linea
+  pasaria a cleartextTrafficPermitted="false".
+-->
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">10.0.2.2</domain>
-        <domain includeSubdomains="false">localhost</domain>
-    </domain-config>
+    <base-config cleartextTrafficPermitted="true" />
 </network-security-config>

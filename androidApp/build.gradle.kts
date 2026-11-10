@@ -1,3 +1,4 @@
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -11,6 +12,15 @@ if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
     apply(plugin = "com.google.firebase.crashlytics")
 }
+
+// Sesion 14: URL de PharmaSoft por build. El emulador usa 10.0.2.2; un telefono real necesita
+// la IP de la PC en la red local. Se define en local.properties (que no se sube a Git):
+//   pharmasoft.url=http://192.168.1.40:8080/
+val propiedadesLocales = Properties().apply {
+    val archivo = rootProject.file("local.properties")
+    if (archivo.exists()) archivo.inputStream().use { load(it) }
+}
+val urlPharmaSoft: String = propiedadesLocales.getProperty("pharmasoft.url") ?: "http://10.0.2.2:8080/"
 
 kotlin {
     compilerOptions {
@@ -36,6 +46,7 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0.0"
+        buildConfigField("String", "PHARMASOFT_URL", "\"$urlPharmaSoft\"")
     }
     packaging {
         resources {

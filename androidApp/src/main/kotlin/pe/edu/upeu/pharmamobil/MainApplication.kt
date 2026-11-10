@@ -4,6 +4,7 @@ import android.app.Application
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.dsl.module
+import pe.edu.upeu.pharmamobil.data.remote.ConfiguracionApi
 import pe.edu.upeu.pharmamobil.di.initKoin
 import pe.edu.upeu.pharmamobil.platform.InfoApp
 
@@ -18,6 +19,7 @@ class MainApplication : Application() {
             modules(
                 module {
                     single { InfoApp(depuracion = BuildConfig.DEBUG, version = BuildConfig.VERSION_NAME) }
+                    single { ConfiguracionApi(urlBase = BuildConfig.PHARMASOFT_URL) }
                 }
             )
         }
