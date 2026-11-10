@@ -20,6 +20,7 @@ import pe.edu.upeu.pharmamobil.domain.port.Notificador
 import pe.edu.upeu.pharmamobil.domain.port.Telemetria
 import pe.edu.upeu.pharmamobil.domain.repository.ProductoRepository
 import pe.edu.upeu.pharmamobil.domain.usecase.runCatchingSuspend
+import pe.edu.upeu.pharmamobil.presentation.producto.textoAntiguedad
 
 /** Lo que el usuario debe poder responder sin abrir ningun menu (Sesion 13). */
 data class SincronizacionUiState(
@@ -30,7 +31,9 @@ data class SincronizacionUiState(
     val ultimaSync: Long? = null,
     val sinConexion: Boolean = false,
     /** Error no relacionado con la red (5xx, respuesta ilegible...). */
-    val error: String? = null
+    val error: String? = null,
+    /** Filas que bajaron en la ultima sincronizacion correcta de esta sesion. */
+    val descargados: Int? = null
 ) {
     val cambiosSinEnviar: Int get() = pendientes + fallidas
 }
@@ -49,7 +52,13 @@ class SincronizacionViewModel(
     private var bajoStockAvisado = 0
 
     private val enCurso = MutableStateFlow(false)
-    private val ultimoResultado = MutableStateFlow(Pair(false, null as String?)) // sinConexion, error
+    private data class UltimoResultado(
+        val sinConexion: Boolean = false,
+        val error: String? = null,
+        val descargados: Int? = null
+    )
+
+    private val ultimoResultado = MutableStateFlow(UltimoResultado())
 
     private val _resultados = MutableSharedFlow<ResumenSync>(extraBufferCapacity = 1)
 
@@ -62,8 +71,8 @@ class SincronizacionViewModel(
         repositorio.observarUltimaSincronizacion(),
         enCurso,
         ultimoResultado
-    ) { pendientes, fallidas, ultima, curso, (sinConexion, error) ->
-        SincronizacionUiState(curso, pendientes, fallidas, ultima, sinConexion, error)
+    ) { pendientes, fallidas, ultima, curso, r ->
+        SincronizacionUiState(curso, pendientes, fallidas, ultima, r.sinConexion, r.error, r.descargados)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SincronizacionUiState())
 
     init {
@@ -85,7 +94,10 @@ class SincronizacionViewModel(
             enCurso.value = true
             val resultado = runCatchingSuspend { operacion() }
             resultado.onSuccess { resumen ->
-                ultimoResultado.value = resumen.sinConexion to null
+                ultimoResultado.value = UltimoResultado(
+                    sinConexion = resumen.sinConexion,
+                    descargados = resumen.descargados ?: ultimoResultado.value.descargados
+                )
                 _resultados.tryEmit(resumen)
                 avisar(resumen)
             }.onFailure { fallo ->
@@ -94,7 +106,10 @@ class SincronizacionViewModel(
                 if (!sinRed && error !is ErrorApi.NoAutorizado) {
                     telemetria.registrarError(fallo, mapOf("pantalla" to "Productos", "operacion" to "sincronizar"))
                 }
-                ultimoResultado.value = sinRed to error.mensaje.takeUnless { sinRed }
+                ultimoResultado.value = ultimoResultado.value.copy(
+                    sinConexion = sinRed,
+                    error = error.mensaje.takeUnless { sinRed }
+                )
             }
             enCurso.value = false
         }
@@ -135,6 +150,13 @@ fun textoEstadoSync(estado: SincronizacionUiState): String {
         cambios != null -> cambios
         else -> "Todo enviado"
     }
+}
+
+/** «Actualizado hace 2 min (14:32) · 5 productos descargados». */
+fun textoDetalleSync(estado: SincronizacionUiState, ahoraMs: Long, formatearHora: (Long) -> String): String {
+    val hora = estado.ultimaSync?.let { " (${formatearHora(it)})" }.orEmpty()
+    val filas = estado.descargados?.let { " · $it producto${if (it == 1) "" else "s"} descargado${if (it == 1) "" else "s"}" }.orEmpty()
+    return textoAntiguedad(estado.ultimaSync, ahoraMs) + hora + filas
 }
 
 /** Mensaje de las filas fallidas, con la accion que se ofrece. */

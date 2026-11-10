@@ -63,10 +63,12 @@ import pe.edu.upeu.pharmamobil.domain.model.Categoria
 import kotlinx.coroutines.delay
 import pe.edu.upeu.pharmamobil.domain.model.Producto
 import pe.edu.upeu.pharmamobil.platform.ahoraMs
+import pe.edu.upeu.pharmamobil.platform.formatearHora
 import pe.edu.upeu.pharmamobil.presentation.components.EstadoVacio
 import pe.edu.upeu.pharmamobil.presentation.components.ValidatedTextField
 import pe.edu.upeu.pharmamobil.presentation.sincronizacion.SincronizacionUiState
 import pe.edu.upeu.pharmamobil.presentation.sincronizacion.SincronizacionViewModel
+import pe.edu.upeu.pharmamobil.presentation.sincronizacion.textoDetalleSync
 import pe.edu.upeu.pharmamobil.presentation.sincronizacion.textoEstadoSync
 import pe.edu.upeu.pharmamobil.presentation.sincronizacion.textoFallidas
 
@@ -308,7 +310,9 @@ private fun ProductoItem(
             overlineContent = producto.categoriaNombre?.let { { Text(it) } },
             supportingContent = {
                 Column {
-                    Text("${formatearPrecio(producto.precio)} · Stock: ${producto.stock}")
+                    // El id se muestra para seguir el recorrido: negativo = provisional (sin enviar).
+                    val id = if (producto.id < 0) "ID local ${producto.id}" else "ID ${producto.id}"
+                    Text("${formatearPrecio(producto.precio)} · Stock: ${producto.stock} · $id")
                     when {
                         // Sesion 13: la fila que agoto sus intentos queda visible con su motivo.
                         producto.fallida -> Column {
@@ -367,7 +371,7 @@ private fun BarraSincronizacion(
                 Column(modifier = Modifier.weight(1f).padding(vertical = 8.dp)) {
                     Text(textoEstadoSync(estado), style = MaterialTheme.typography.bodyMedium)
                     Text(
-                        textoAntiguedad(estado.ultimaSync, ahora),
+                        textoDetalleSync(estado, ahora, ::formatearHora),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

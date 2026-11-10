@@ -156,8 +156,9 @@ class SincronizarUseCaseTest {
         val e = Escenario(ServidorSimulado(listOf(dto(1, "Paracetamol"))))
         e.pendiente()
 
-        e.caso()
+        val resumen = e.caso()
 
+        assertEquals(2, resumen.descargados, "Paracetamol + el pendiente ya enviado")
         val lista = e.repo.observar().first()
         assertEquals(setOf("Paracetamol", "Ibuprofeno 400 mg"), lista.map { it.nombre }.toSet())
         assertTrue(lista.none { it.pendiente })

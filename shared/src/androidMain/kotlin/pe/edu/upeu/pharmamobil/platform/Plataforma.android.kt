@@ -22,6 +22,9 @@ actual fun infoDispositivo(): InfoDispositivo = InfoDispositivo(
 
 actual fun ahoraMs(): Long = System.currentTimeMillis()
 
+actual fun formatearHora(epochMs: Long): String =
+    java.text.SimpleDateFormat("HH:mm", Locale.forLanguageTag("es-PE")).format(java.util.Date(epochMs))
+
 /** Android: Intent ACTION_SEND con el selector del sistema. */
 class CompartidorAndroid(private val context: Context) : Compartidor {
     override fun compartir(texto: String) {

@@ -31,6 +31,13 @@ actual fun infoDispositivo(): InfoDispositivo = InfoDispositivo(
 
 actual fun ahoraMs(): Long = (NSDate().timeIntervalSince1970 * 1000).toLong()
 
+actual fun formatearHora(epochMs: Long): String {
+    val formateador = platform.Foundation.NSDateFormatter()
+    formateador.dateFormat = "HH:mm"
+    // initWithTimeIntervalSinceReferenceDate cuenta desde 2001-01-01 (978307200 s despues de 1970).
+    return formateador.stringFromDate(NSDate(timeIntervalSinceReferenceDate = epochMs / 1000.0 - 978_307_200.0))
+}
+
 /** iOS: UIActivityViewController (hoja de compartir) sobre la ventana actual. */
 class CompartidorIos : Compartidor {
     override fun compartir(texto: String) {
