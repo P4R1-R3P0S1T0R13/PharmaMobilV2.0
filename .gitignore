@@ -15,3 +15,7 @@ xcuserdata/
 entregables/
 # Configuracion de Firebase de cada desarrollador (Sesion 13)
 androidApp/google-services.json
+# Almacen de claves y credenciales de firma (Sesion 14): NUNCA en Git
+keystore.properties
+*.jks
+*.keystore

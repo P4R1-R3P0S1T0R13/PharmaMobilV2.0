@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.jetbrains.compose.resources.painterResource
 import pe.edu.upeu.pharmamobil.domain.model.Sesion
+import pe.edu.upeu.pharmamobil.platform.InfoApp
 import pe.edu.upeu.pharmamobil.platform.infoDispositivo
 import pe.edu.upeu.pharmamobil.presentation.permiso.AvisosViewModel
 import pe.edu.upeu.pharmamobil.presentation.permiso.textosAvisos
@@ -38,11 +39,12 @@ fun InicioScreen(
     sesion: Sesion,
     viewModel: InicioViewModel,
     avisos: AvisosViewModel,
+    info: InfoApp,
     modifier: Modifier = Modifier
 ) {
     val resultadoReportes by viewModel.resultado.collectAsStateWithLifecycle()
     val resultadoDiagnostico by viewModel.resultadoDiagnostico.collectAsStateWithLifecycle()
-    val info = remember { infoDispositivo() }
+    val dispositivo = remember { infoDispositivo() }
 
     Column(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
@@ -61,25 +63,31 @@ fun InicioScreen(
             Text("Usuario: ${sesion.username}")
             Text("Rol: ${sesion.roles.joinToString()}")
             Text("Permisos: ${sesion.permisos.joinToString()}", style = MaterialTheme.typography.bodySmall)
-            OutlinedButton(onClick = viewModel::probarAccesoReportes) { Text("Probar acceso a reportes") }
-            resultadoReportes?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+            // Herramienta de prueba (Sesion 10): solo en la build de depuracion (hueco H9).
+            if (info.depuracion) {
+                OutlinedButton(onClick = viewModel::probarAccesoReportes) { Text("Probar acceso a reportes") }
+                resultadoReportes?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+            }
         }
 
-        // Escenarios de la bitacora de tokens (Actividad autonoma 10).
-        Tarjeta("Pruebas de sesion") {
-            OutlinedButton(onClick = viewModel::consultarMe) { Text("1. Consultar /auth/me (token valido)") }
-            OutlinedButton(onClick = viewModel::alterarToken) { Text("3. Alterar token guardado") }
-            OutlinedButton(onClick = viewModel::sinCabecera) { Text("4. Peticion sin cabecera") }
-            OutlinedButton(onClick = viewModel::prefijoMinuscula) { Text("5. Prefijo 'bearer' en minuscula") }
-            resultadoDiagnostico?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+        if (info.depuracion) {
+            // Escenarios de la bitacora de tokens (Actividad autonoma 10).
+            Tarjeta("Pruebas de sesion") {
+                OutlinedButton(onClick = viewModel::consultarMe) { Text("1. Consultar /auth/me (token valido)") }
+                OutlinedButton(onClick = viewModel::alterarToken) { Text("3. Alterar token guardado") }
+                OutlinedButton(onClick = viewModel::sinCabecera) { Text("4. Peticion sin cabecera") }
+                OutlinedButton(onClick = viewModel::prefijoMinuscula) { Text("5. Prefijo 'bearer' en minuscula") }
+                resultadoDiagnostico?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+            }
         }
 
         TarjetaAvisos(avisos)
 
         Tarjeta("Este dispositivo") {
-            Text("Sistema: ${info.sistema} ${info.version}")
-            Text("Modelo: ${info.modelo}")
-            Text("Idioma: ${info.idioma}")
+            Text("PharmaMobil ${info.version}${if (info.depuracion) " (depuracion)" else ""}")
+            Text("Sistema: ${dispositivo.sistema} ${dispositivo.version}")
+            Text("Modelo: ${dispositivo.modelo}")
+            Text("Idioma: ${dispositivo.idioma}")
         }
     }
 }

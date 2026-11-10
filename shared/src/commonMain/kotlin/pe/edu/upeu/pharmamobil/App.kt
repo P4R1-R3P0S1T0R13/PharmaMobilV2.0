@@ -61,6 +61,7 @@ import pe.edu.upeu.pharmamobil.domain.model.textoParaCompartir
 import pe.edu.upeu.pharmamobil.domain.repository.AuthRepository
 import pe.edu.upeu.pharmamobil.navigation.Screen
 import pe.edu.upeu.pharmamobil.platform.Compartidor
+import pe.edu.upeu.pharmamobil.platform.InfoApp
 import pe.edu.upeu.pharmamobil.platform.formatearSoles
 import pe.edu.upeu.pharmamobil.presentation.cliente.ClienteScreen
 import pe.edu.upeu.pharmamobil.presentation.inicio.InicioScreen
@@ -275,7 +276,8 @@ private fun Estructura(nav: Navegacion, onMenu: (() -> Unit)?) {
         val clave = nav.sesion.claveDeVista()
         when (nav.actual) {
             Screen.Inicio -> InicioScreen(
-                nav.sesion, koinViewModel(key = "inicio-$clave"), koinViewModel(key = "avisos-$clave"), contenido
+                nav.sesion, koinViewModel(key = "inicio-$clave"), koinViewModel(key = "avisos-$clave"),
+                koinInject<InfoApp>(), contenido
             )
             Screen.Productos -> ProductosConCapacidadesNativas(nav.sesion, nav.sincronizacion, contenido)
             Screen.Clientes -> ClienteScreen(contenido)

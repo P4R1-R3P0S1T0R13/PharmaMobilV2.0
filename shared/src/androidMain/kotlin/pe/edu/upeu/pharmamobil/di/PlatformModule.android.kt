@@ -11,15 +11,13 @@ import pe.edu.upeu.pharmamobil.data.local.CreadorDeDriver
 import pe.edu.upeu.pharmamobil.data.local.CreadorDeDriverAndroid
 import pe.edu.upeu.pharmamobil.data.permiso.GestorPermisosAndroid
 import pe.edu.upeu.pharmamobil.data.permiso.NotificadorAndroid
-import pe.edu.upeu.pharmamobil.data.remote.ConfiguracionApi
 import pe.edu.upeu.pharmamobil.domain.permiso.GestorPermisos
 import pe.edu.upeu.pharmamobil.domain.port.Notificador
 import pe.edu.upeu.pharmamobil.platform.Compartidor
 import pe.edu.upeu.pharmamobil.platform.CompartidorAndroid
 
 actual val platformModule: Module = module {
-    // 10.0.2.2 es la IP con la que el emulador de Android ve al localhost de la PC.
-    single { ConfiguracionApi(urlBase = "http://10.0.2.2:8080/") }
+    // ConfiguracionApi (URL de PharmaSoft) la registra MainApplication desde BuildConfig (Sesion 14).
     single<HttpClientEngine> { OkHttp.create() }
     single<Compartidor> { CompartidorAndroid(androidContext()) }
     single<AlmacenSeguro> { AlmacenSeguroAndroid(androidContext()) }

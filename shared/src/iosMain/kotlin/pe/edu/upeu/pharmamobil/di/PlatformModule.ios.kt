@@ -13,6 +13,7 @@ import pe.edu.upeu.pharmamobil.data.permiso.NotificadorIos
 import pe.edu.upeu.pharmamobil.data.remote.ConfiguracionApi
 import pe.edu.upeu.pharmamobil.domain.permiso.GestorPermisos
 import pe.edu.upeu.pharmamobil.domain.port.Notificador
+import pe.edu.upeu.pharmamobil.platform.InfoApp
 import pe.edu.upeu.pharmamobil.platform.Compartidor
 import pe.edu.upeu.pharmamobil.platform.CompartidorIos
 
@@ -25,4 +26,13 @@ actual val platformModule: Module = module {
     single<CreadorDeDriver> { CreadorDeDriverIos() }
     single<GestorPermisos> { GestorPermisosIos() }
     single<Notificador> { NotificadorIos() }
+    // Sesion 14: datos de la build. isDebugBinary es false en la configuracion Release de Xcode.
+    single {
+        @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+        InfoApp(
+            depuracion = kotlin.native.Platform.isDebugBinary,
+            version = platform.Foundation.NSBundle.mainBundle
+                .objectForInfoDictionaryKey("CFBundleShortVersionString") as? String ?: "1.0.0"
+        )
+    }
 }
