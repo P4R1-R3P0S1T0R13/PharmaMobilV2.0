@@ -183,3 +183,34 @@ Rama `feature/integrador-13`. La tabla de huecos del recorrido completo está en
 ```bash
 ./gradlew :shared:testAndroidHostTest   # incluye SincronizarUseCaseTest, SincronizacionViewModelTest y AvisosViewModelTest
 ```
+
+## Sesión 14 · Builds firmados y entrega
+
+### Firma (sin secretos en el repositorio)
+1. Crear el almacén de claves **fuera del proyecto** (una sola vez) y guardar una copia de respaldo fuera de la PC:
+   ```
+   keytool -genkeypair -v -keystore C:\Users\<usuario>\claves\pharmamobil.jks -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 -alias pharmamobil
+   ```
+2. Copiar `keystore.properties.example` como `keystore.properties` (raíz del proyecto) y completar ruta, alias y contraseñas.
+   `keystore.properties`, `*.jks` y `*.keystore` están en `.gitignore`.
+3. Sin `keystore.properties` el proyecto compila igual en debug; solo la release queda sin firmar.
+
+### URL del backend en dispositivo real
+En `local.properties`: `pharmasoft.url=http://<IP-LAN-de-la-PC>:8080/` (por defecto `http://10.0.2.2:8080/`, el emulador).
+
+### Generar los entregables
+```
+./gradlew :androidApp:entregables
+```
+Deja en `entregables/builds/` (ignorada por Git) `Pari_ProyectoFinal_Android.aab` y `Pari_ProyectoFinal_Android.apk`.
+Verificar la firma: `apksigner verify --print-certs entregables/builds/Pari_ProyectoFinal_Android.apk`.
+
+### Versión de entrega
+| Campo | Valor |
+|---|---|
+| applicationId | `pe.edu.upeu.pharmamobil` |
+| versionCode | 1 |
+| versionName | 1.0.0 |
+| Etiqueta Git | `v1.0-final` |
+
+Detalle: `docs/sesion14/`.
