@@ -92,6 +92,16 @@ class SincronizacionViewModelTest {
     }
 
     @Test
+    fun elDetalleIndicaHoraYFilasDescargadas() {
+        val estado = SincronizacionUiState(ultimaSync = 0L, descargados = 5)
+        assertEquals(
+            "Actualizado hace 2 minutos (14:32) · 5 productos descargados",
+            textoDetalleSync(estado, ahoraMs = 120_000L) { "14:32" }
+        )
+        assertEquals("Aun no se sincronizo con el servidor", textoDetalleSync(SincronizacionUiState(), 0L) { "" })
+    }
+
+    @Test
     fun laTelemetriaNuncaRecibeElTokenNiDatosPersonales() {
         val limpio = mapOf(
             "pantalla" to "Productos",

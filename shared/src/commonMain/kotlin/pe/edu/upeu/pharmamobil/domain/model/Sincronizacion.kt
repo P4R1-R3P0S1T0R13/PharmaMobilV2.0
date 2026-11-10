@@ -21,7 +21,9 @@ data class ResumenSync(
     val pendientes: Int = 0,
     val sinConexion: Boolean = false,
     /** id local negativo -> id real asignado por PharmaSoft. */
-    val confirmados: Map<Long, Long> = emptyMap()
+    val confirmados: Map<Long, Long> = emptyMap(),
+    /** Productos que bajaron del servidor; null si no se llego a bajar (sin red). */
+    val descargados: Int? = null
 )
 
 /** Inventario que baja del servidor. */

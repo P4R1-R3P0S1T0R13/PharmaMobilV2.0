@@ -56,7 +56,11 @@ class SincronizarUseCase(
         }
 
         // Solo despues de subir se baja: invertirlo borraria lo pendiente.
-        local.conciliar(remoto.descargar())
-        return ResumenSync(enviadas, fallidas, local.contarPendientes(MAX_INTENTOS), confirmados = confirmados)
+        val inventario = remoto.descargar()
+        local.conciliar(inventario)
+        return ResumenSync(
+            enviadas, fallidas, local.contarPendientes(MAX_INTENTOS),
+            confirmados = confirmados, descargados = inventario.productos.size
+        )
     }
 }
